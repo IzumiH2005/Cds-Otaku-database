@@ -345,11 +345,12 @@ const ThemePage = () => {
           </div>
           
           <div className="flex gap-2">
-            <Button asChild className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow transition-all duration-300 hover:shadow-md">
-              <Link to={`/deck/${deckId}/theme/${themeId}/study`}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                Étudier ce thème
-              </Link>
+            <Button 
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow transition-all duration-300 hover:shadow-md"
+              onClick={() => navigate(`/deck/${deckId}/theme/${themeId}/study`)}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Étudier ce thème
             </Button>
             
             {isOwner && (

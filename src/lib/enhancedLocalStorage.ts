@@ -1,147 +1,16 @@
 /**
  * Module d'amélioration de localStorage permettant de stocker des quantités importantes de données
- * même au-delà des limites typiques de localStorage (5MB)
- * 
- * Fonctionnalités:
- * - Segmentation des données pour dépasser la limite de 5MB
- * - Compression LZW pour optimiser l'espace de stockage
- * - Gestion des erreurs de stockage
  */
 
 /**
- * Utilitaires de compression LZW (Lempel-Ziv-Welch) pour réduire la taille des données
+ * Constantes pour la pagination et la segmentation des données
  */
-const LZW = {
-  // Compression du texte
-  compress: (uncompressed: string): string => {
-    if (!uncompressed) return '';
-    
-    const dictionary: Record<string, number> = {};
-    const result: number[] = [];
-    let dictSize = 256;
-    
-    for (let i = 0; i < 256; i++) {
-      dictionary[String.fromCharCode(i)] = i;
-    }
-    
-    let w = '';
-    for (let i = 0; i < uncompressed.length; i++) {
-      const c = uncompressed.charAt(i);
-      const wc = w + c;
-      if (dictionary[wc] !== undefined) {
-        w = wc;
-      } else {
-        result.push(dictionary[w]);
-        dictionary[wc] = dictSize++;
-        w = c;
-      }
-    }
-    
-    if (w !== '') {
-      result.push(dictionary[w]);
-    }
-    
-    return result.map(code => String.fromCharCode(code)).join('');
-  },
-  
-  // Décompression du texte
-  decompress: (compressed: string): string => {
-    if (!compressed) return '';
-    
-    const dictionary: Record<number, string> = {};
-    let dictSize = 256;
-    
-    for (let i = 0; i < 256; i++) {
-      dictionary[i] = String.fromCharCode(i);
-    }
-    
-    const encodedData = Array.from(compressed).map(char => char.charCodeAt(0));
-    let w = dictionary[encodedData[0]];
-    let result = w;
-    
-    for (let i = 1; i < encodedData.length; i++) {
-      const k = encodedData[i];
-      let entry: string;
-      
-      if (dictionary[k] !== undefined) {
-        entry = dictionary[k];
-      } else if (k === dictSize) {
-        entry = w + w.charAt(0);
-      } else {
-        throw new Error('Erreur: k invalide');
-      }
-      
-      result += entry;
-      dictionary[dictSize++] = w + entry.charAt(0);
-      w = entry;
-    }
-    
-    return result;
-  }
-};
-
-// Constantes pour la pagination et la segmentation des données
-const MAX_ITEMS_PER_SEGMENT = 10; // Nombre maximal d'éléments par segment - très réduit pour une meilleure gestion
-const PREFIX_SEGMENT = "_s"; // Préfixe court pour les segments (économie d'espace)
-const USE_COMPRESSION = true; // Activer la compression des données
-const MAX_SEGMENTS = 1000; // Support jusqu'à 1000 segments (10 000 flashcards potentielles)
+const MAX_ITEMS_PER_SEGMENT = 100; // Augmenté pour éviter de trop segmenter
+const PREFIX_SEGMENT = "_s"; // Préfixe compatible avec les anciennes données
+const MAX_SEGMENTS = 100; // Limite raisonnable de segments
 
 /**
- * Compresse une chaîne JSON pour le stockage
- * @param jsonData Données JSON à compresser
- * @returns Chaîne compressée ou la chaîne originale si la compression est désactivée
- */
-function compressData(jsonData: string): string {
-  if (!USE_COMPRESSION) return jsonData;
-  
-  try {
-    // Compression LZW
-    const compressed = LZW.compress(jsonData);
-    
-    // Si la compression réduit effectivement la taille, on l'utilise
-    if (compressed.length < jsonData.length * 0.9) { // Au moins 10% de gain
-      return `C:${compressed}`; // Préfixe pour indiquer que c'est compressé
-    }
-    
-    // Sinon on garde la version non compressée
-    return `R:${jsonData}`; // Préfixe pour indiquer que c'est brut (raw)
-  } catch (error) {
-    console.warn('Erreur de compression, utilisation des données non compressées:', error);
-    return `R:${jsonData}`;
-  }
-}
-
-/**
- * Décompresse une chaîne stockée
- * @param data Données potentiellement compressées
- * @returns Chaîne JSON décompressée
- */
-function decompressData(data: string): string {
-  if (!data || data.length < 2) return data;
-  
-  // Vérifier si les données sont compressées
-  const prefix = data.substring(0, 2);
-  const content = data.substring(2);
-  
-  if (prefix === 'C:') {
-    // Données compressées, appliquer la décompression
-    try {
-      return LZW.decompress(content);
-    } catch (error) {
-      console.error('Erreur de décompression:', error);
-      throw error; // Propagation de l'erreur pour gestion plus haut
-    }
-  } else if (prefix === 'R:') {
-    // Données brutes, retourner le contenu tel quel
-    return content;
-  }
-  
-  // Format non reconnu, retourner tel quel (compatibilité descendante)
-  return data;
-}
-
-/**
- * Sauvegarde des données en les segmentant si nécessaire et en les compressant
+ * Sauvegarde des données en les segmentant si nécessaire
  * @param key Clé principale pour les données
  * @param data Données à sauvegarder (tableau d'objets)
  */
@@ -150,64 +19,61 @@ export function saveData<T>(key: string, data: T[]): void {
     // Si les données sont petites, on les sauvegarde directement
     if (data.length <= MAX_ITEMS_PER_SEGMENT) {
       const jsonData = JSON.stringify(data);
-      const compressedData = compressData(jsonData);
-      
-      localStorage.setItem(key, compressedData);
-      // Suppression des segments éventuels
-      clearSegments(key);
+      localStorage.setItem(key, jsonData);
+      // On nettoie d'éventuels segments qui pourraient exister
+      for (let i = 0; i < MAX_SEGMENTS; i++) {
+        const segmentKey = `${key}${PREFIX_SEGMENT}${i}`;
+        if (localStorage.getItem(segmentKey) !== null) {
+          localStorage.removeItem(segmentKey);
+        } else {
+          break; // On s'arrête si on ne trouve plus de segments
+        }
+      }
       return;
     }
 
     // Sinon, on divise les données en segments
     const totalSegments = Math.ceil(data.length / MAX_ITEMS_PER_SEGMENT);
     
-    // Méta-informations sur les segments
+    // Méta-informations sur les segments (pour retrouver les données)
     const metaInfo = {
       isSegmented: true,
       totalSegments,
       totalItems: data.length,
-      isCompressed: USE_COMPRESSION,
       lastUpdated: new Date().toISOString()
     };
     
-    // Sauvegarde des méta-informations (non compressées pour la performance)
+    // Sauvegarde des méta-informations
     localStorage.setItem(key, JSON.stringify(metaInfo));
     
-    // Sauvegarde des segments avec compression
+    // Sauvegarde des segments
     for (let i = 0; i < totalSegments; i++) {
       const start = i * MAX_ITEMS_PER_SEGMENT;
       const end = Math.min(start + MAX_ITEMS_PER_SEGMENT, data.length);
       const segment = data.slice(start, end);
       
       const jsonData = JSON.stringify(segment);
-      const compressedData = compressData(jsonData);
-      
-      localStorage.setItem(`${key}${PREFIX_SEGMENT}${i}`, compressedData);
+      localStorage.setItem(`${key}${PREFIX_SEGMENT}${i}`, jsonData);
     }
     
-    // Suppression des anciens segments superflus
-    for (let i = totalSegments; i < totalSegments + 10; i++) {
-      localStorage.removeItem(`${key}${PREFIX_SEGMENT}${i}`);
+    // Suppression des anciens segments inutiles
+    for (let i = totalSegments; i < MAX_SEGMENTS; i++) {
+      const segmentKey = `${key}${PREFIX_SEGMENT}${i}`;
+      if (localStorage.getItem(segmentKey) !== null) {
+        localStorage.removeItem(segmentKey);
+      } else {
+        break; // On s'arrête si on ne trouve plus de segments
+      }
     }
     
     console.log(`Données sauvegardées pour ${key}: ${data.length} éléments, ${totalSegments} segments`);
   } catch (error) {
     console.error(`Erreur lors de la sauvegarde de données pour ${key}:`, error);
-    // En cas d'erreur, on essaie de sauvegarder en mode dégradé
-    try {
-      localStorage.setItem(`${key}_error`, JSON.stringify({
-        message: "Erreur lors de la dernière sauvegarde",
-        timestamp: new Date().toISOString(),
-        error: String(error)
-      }));
-    } catch (e) {
-      // Silence
-    }
   }
 }
 
 /**
- * Charge des données potentiellement segmentées et compressées
+ * Charge des données potentiellement segmentées
  * @param key Clé principale pour les données
  * @param defaultValue Valeur par défaut si aucune donnée n'est trouvée
  * @returns Les données chargées
@@ -217,14 +83,7 @@ export function loadData<T>(key: string, defaultValue: T[]): T[] {
     const rawData = localStorage.getItem(key);
     if (!rawData) return defaultValue;
     
-    // Vérifier si les données sont potentiellement compressées
-    if (rawData.startsWith('C:') || rawData.startsWith('R:')) {
-      // Décompresser d'abord
-      const jsonData = decompressData(rawData);
-      return JSON.parse(jsonData) as T[];
-    }
-    
-    // Sinon, essayer de parser normalement
+    // Essayer de parser les données
     const parsed = JSON.parse(rawData);
     
     // Si les données ne sont pas segmentées, les retourner directement
@@ -232,8 +91,8 @@ export function loadData<T>(key: string, defaultValue: T[]): T[] {
       return parsed as T[];
     }
     
-    // Sinon, reconstituer les données à partir des segments (potentiellement compressés)
-    const { totalSegments, totalItems, isCompressed = false } = parsed;
+    // Sinon, reconstituer les données à partir des segments
+    const { totalSegments, totalItems } = parsed;
     const result: T[] = [];
     
     for (let i = 0; i < totalSegments; i++) {
@@ -241,21 +100,17 @@ export function loadData<T>(key: string, defaultValue: T[]): T[] {
       const segmentData = localStorage.getItem(segmentKey);
       
       if (segmentData) {
-        let segmentJson: string;
-        
-        // Vérifier si le segment est compressé
-        if (isCompressed || segmentData.startsWith('C:') || segmentData.startsWith('R:')) {
-          segmentJson = decompressData(segmentData);
-        } else {
-          segmentJson = segmentData;
+        try {
+          const segment = JSON.parse(segmentData) as T[];
+          result.push(...segment);
+        } catch (err) {
+          console.error(`Erreur lors du parsing du segment ${i} pour ${key}:`, err);
         }
-        
-        const segment = JSON.parse(segmentJson) as T[];
-        result.push(...segment);
+      } else {
+        console.warn(`Segment manquant ${i} pour ${key}`);
       }
     }
     
-    // Vérification de cohérence
     if (result.length !== totalItems) {
       console.warn(`Incohérence dans les données segmentées pour ${key}: ${result.length} éléments chargés au lieu de ${totalItems}`);
     }
@@ -263,37 +118,117 @@ export function loadData<T>(key: string, defaultValue: T[]): T[] {
     return result;
   } catch (error) {
     console.error(`Erreur lors du chargement de données pour ${key}:`, error);
-    // En cas d'erreur, essayer de récupérer les données brutes
+    
+    // Tentative de récupération des données originales
     try {
-      // Tentative de récupération directe des segments sans vérification des méta-données
-      const result: T[] = [];
-      for (let i = 0; i < MAX_SEGMENTS; i++) {
-        const segmentKey = `${key}${PREFIX_SEGMENT}${i}`;
-        const segmentData = localStorage.getItem(segmentKey);
-        
-        if (!segmentData) {
-          if (i > 10 && result.length > 0) break; // On a probablement tout récupéré
-          continue;
-        }
-        
-        try {
-          let segmentJson: string;
-          if (segmentData.startsWith('C:') || segmentData.startsWith('R:')) {
-            segmentJson = decompressData(segmentData);
-          } else {
-            segmentJson = segmentData;
+      // Chercher si les données existent directement dans une version antérieure
+      try {
+        // Essayer de voir si les données sont directement dans la clé (version pré-segmentation)
+        const oldData = localStorage.getItem(key);
+        if (oldData && !oldData.includes('isSegmented')) {
+          try {
+            // Tenter de parser directement
+            const parsedData = JSON.parse(oldData) as T[];
+            if (Array.isArray(parsedData) && parsedData.length > 0) {
+              console.log(`Récupération des anciennes données pour ${key}: ${parsedData.length} éléments`);
+              // Sauvegarder une copie pour préserver les données
+              localStorage.setItem(`${key}_backup`, oldData);
+              return parsedData;
+            }
+          } catch (parseError) {
+            console.warn(`Erreur lors du parsing des anciennes données de ${key}`, parseError);
           }
-          
-          const segment = JSON.parse(segmentJson) as T[];
-          result.push(...segment);
-        } catch (segmentError) {
-          console.warn(`Erreur lors de la récupération du segment ${i} pour ${key}:`, segmentError);
+        }
+      } catch (e) {
+        // Ignorer cette étape si elle échoue
+      }
+      
+      // Chercher si des anciennes données existent avec prefix
+      const legacyKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const storedKey = localStorage.key(i);
+        if (storedKey && storedKey.startsWith(key)) legacyKeys.push(storedKey);
+      }
+      
+      if (legacyKeys.length > 0) {
+        console.log(`Clés trouvées pour ${key}:`, legacyKeys);
+      }
+      
+      // Chercher les anciennes versions sauvegardées
+      const legacyData = localStorage.getItem(`${key}_legacy`) || localStorage.getItem(`${key}_backup`);
+      if (legacyData) {
+        console.log(`Récupération de données anciennes pour ${key}`);
+        try {
+          return JSON.parse(legacyData) as T[];
+        } catch (e) {
+          console.warn(`Erreur lors du parsing des données legacy pour ${key}`, e);
         }
       }
       
+      // Sinon, essayer de récupérer les segments directement
+      const result: T[] = [];
+      
+      // D'abord, essayer avec les anciens préfixes qui pourraient exister
+      const prefixes = ["_s", "_segment_", ""];
+      
+      for (const prefix of prefixes) {
+        let foundSegments = false;
+        
+        for (let i = 0; i < MAX_SEGMENTS; i++) {
+          const segmentKey = `${key}${prefix}${i}`;
+          const segmentData = localStorage.getItem(segmentKey);
+          
+          if (!segmentData) {
+            if (i > 0 && result.length > 0) break; // On a probablement tout récupéré
+            continue;
+          }
+          
+          foundSegments = true;
+          
+          try {
+            // Essayer de décompresser si nécessaire 
+            let jsonData = segmentData;
+            if (segmentData.startsWith('C:') || segmentData.startsWith('R:')) {
+              try {
+                // Tenter de récupérer le contenu brut
+                jsonData = segmentData.substring(2);
+              } catch (e) {
+                // Ignorer si cela échoue
+                jsonData = segmentData;
+              }
+            }
+            
+            const segment = JSON.parse(jsonData) as T[];
+            result.push(...segment);
+            console.log(`Segment ${i} récupéré pour ${key} (préfixe: ${prefix}): ${segment.length} éléments`);
+          } catch (segmentError) {
+            console.warn(`Erreur lors de la récupération du segment ${i} pour ${key} (préfixe: ${prefix}):`, segmentError);
+          }
+        }
+        
+        if (foundSegments) break; // Si on a trouvé des segments avec ce préfixe, ne pas essayer les autres
+      }
+      
       if (result.length > 0) {
-        console.log(`Mode dégradé: Récupération de ${result.length} éléments pour ${key}`);
+        console.log(`Récupération partielle: ${result.length} éléments pour ${key}`);
+        // Sauvegarder les données récupérées pour éviter de répéter l'opération
+        try {
+          const recovered = JSON.stringify(result);
+          localStorage.setItem(`${key}_recovered`, recovered);
+        } catch (e) {
+          // Ignorer l'erreur de sauvegarde 
+        }
         return result;
+      }
+      
+      // Dernière tentative: voir si on a déjà sauvegardé des données récupérées
+      const recoveredData = localStorage.getItem(`${key}_recovered`);
+      if (recoveredData) {
+        try {
+          return JSON.parse(recoveredData) as T[];
+        } catch (e) {
+          // Ignorer l'erreur
+        }
       }
     } catch (recoveryError) {
       console.error(`Échec de la récupération en mode dégradé pour ${key}:`, recoveryError);
