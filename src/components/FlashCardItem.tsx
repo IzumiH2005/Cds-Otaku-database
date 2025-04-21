@@ -200,30 +200,28 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
 
   return (
     <>
-      <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
+      <div className="group relative">
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
+            className="h-6 w-6 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
             onClick={() => setShowEditDialog(true)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3 w-3" />
           </Button>
           <Button
             variant="destructive"
             size="icon"
-            className="h-8 w-8"
+            className="h-6 w-6"
             onClick={() => setShowDeleteDialog(true)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
 
-        <CardContent className="p-0">
-          <FlashCard {...card} />
-        </CardContent>
-      </Card>
+        <FlashCard {...card} />
+      </div>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-3xl">
