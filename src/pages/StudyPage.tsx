@@ -143,15 +143,34 @@ const StudyPage = () => {
   const handleNextCard = () => {
     try {
       if (currentCardIndex < filteredCards.length - 1) {
-        // Préparation avant le changement d'index
-        setIsFlipped(false);
-        setShowAnswer(false);
-        setShowHint(false);
+        // Afficher un toast de transition pour donner un feedback visuel
+        const loadingToast = toast({
+          title: "Chargement...",
+          description: "Changement de carte en cours",
+        });
         
-        // Utiliser un setTimeout pour éviter les problèmes de rendu
+        // Préparation avant le changement d'index - séquencer les mises à jour d'état
+        setIsFlipped(false);
+        
+        // Utiliser des petits délais entre les mises à jour d'état pour éviter les conflits
         setTimeout(() => {
-          setCurrentCardIndex(prev => prev + 1);
-        }, 50);
+          setShowAnswer(false);
+          setTimeout(() => {
+            setShowHint(false);
+            
+            // Délai final avant de changer l'index
+            setTimeout(() => {
+              try {
+                setCurrentCardIndex(prev => prev + 1);
+                // Supprimer le toast après le changement
+                setTimeout(() => loadingToast.dismiss(), 200);
+              } catch (innerError) {
+                console.error("Erreur lors de la mise à jour de l'index:", innerError);
+                loadingToast.dismiss();
+              }
+            }, 30);
+          }, 20);
+        }, 20);
       } else {
         if (studyMode === StudyMode.FLASHCARDS) {
           recordStudySession();
@@ -174,15 +193,34 @@ const StudyPage = () => {
   const handlePrevCard = () => {
     try {
       if (currentCardIndex > 0) {
-        // Préparation avant le changement d'index
-        setIsFlipped(false);
-        setShowAnswer(false);
-        setShowHint(false);
+        // Afficher un toast de transition pour donner un feedback visuel
+        const loadingToast = toast({
+          title: "Chargement...",
+          description: "Changement de carte en cours",
+        });
         
-        // Utiliser un setTimeout pour éviter les problèmes de rendu
+        // Préparation avant le changement d'index - séquencer les mises à jour d'état
+        setIsFlipped(false);
+        
+        // Utiliser des petits délais entre les mises à jour d'état pour éviter les conflits
         setTimeout(() => {
-          setCurrentCardIndex(prev => prev - 1);
-        }, 50);
+          setShowAnswer(false);
+          setTimeout(() => {
+            setShowHint(false);
+            
+            // Délai final avant de changer l'index
+            setTimeout(() => {
+              try {
+                setCurrentCardIndex(prev => prev - 1);
+                // Supprimer le toast après le changement
+                setTimeout(() => loadingToast.dismiss(), 200);
+              } catch (innerError) {
+                console.error("Erreur lors de la mise à jour de l'index:", innerError);
+                loadingToast.dismiss();
+              }
+            }, 30);
+          }, 20);
+        }, 20);
       }
     } catch (error) {
       console.error("Erreur lors du passage à la carte précédente:", error);
@@ -196,13 +234,30 @@ const StudyPage = () => {
 
   const handleCardFlip = () => {
     try {
-      // Utiliser un setTimeout pour éviter les problèmes de rendu
+      // Afficher un indicateur visuel du processus en cours
+      const loadingToast = toast({
+        title: "Animation...",
+        description: "Retournement de la carte en cours",
+      });
+      
+      // Utiliser un setTimeout avec un délai plus important pour laisser le temps au DOM de se mettre à jour
       setTimeout(() => {
-        setIsFlipped(!isFlipped);
-        if (!isFlipped) {
-          recordCardStudy(true);
+        try {
+          // State update
+          setIsFlipped(!isFlipped);
+          
+          // Si on retourne la carte du côté réponse, enregistrer l'étude
+          if (!isFlipped) {
+            recordCardStudy(true);
+          }
+          
+          // Supprimer l'indicateur visuel après un court délai
+          setTimeout(() => loadingToast.dismiss(), 100);
+        } catch (innerError) {
+          console.error("Erreur lors de la mise à jour de l'état de la carte:", innerError);
+          loadingToast.dismiss();
         }
-      }, 10);
+      }, 50);
     } catch (error) {
       console.error("Erreur lors du retournement de la carte:", error);
       toast({
@@ -555,32 +610,134 @@ const StudyPage = () => {
             </Button>
             
             {themes.length > 0 && (
-              <Select value={studyTheme} onValueChange={handleThemeChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sélectionner un thème" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les thèmes</SelectItem>
-                  {themes.map((theme) => (
-                    <SelectItem key={theme.id} value={theme.id}>
-                      {theme.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Select 
+                  value={studyTheme} 
+                  onValueChange={(value) => {
+                    // Afficher un toast de chargement
+                    const loadingToast = toast({
+                      title: "Chargement...",
+                      description: "Changement de thème en cours",
+                    });
+                    
+                    // Utiliser un setTimeout pour permettre au DOM de se mettre à jour
+                    setTimeout(() => {
+                      try {
+                        // Mettre à jour le thème
+                        handleThemeChange(value);
+                        // Supprimer le toast après le changement réussi
+                        setTimeout(() => loadingToast.dismiss(), 300);
+                      } catch (error) {
+                        console.error("Erreur lors du changement de thème:", error);
+                        toast({
+                          title: "Erreur",
+                          description: "Problème lors du changement de thème",
+                          variant: "destructive",
+                        });
+                      }
+                    }, 50);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sélectionner un thème" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les thèmes</SelectItem>
+                    {themes.map((theme) => (
+                      <SelectItem key={theme.id} value={theme.id}>
+                        {theme.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
         </div>
 
         <Card className="mb-6">
           <CardHeader>
-            <Tabs defaultValue={studyMode} onValueChange={(value) => handleStudyModeChange(value as StudyMode)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value={StudyMode.FLASHCARDS}>Flashcards</TabsTrigger>
-                <TabsTrigger value={StudyMode.QUIZ}>Quiz</TabsTrigger>
-                <TabsTrigger value={StudyMode.WRITE}>Écriture</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="relative">
+              <Tabs defaultValue={studyMode} value={studyMode}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger 
+                    value={StudyMode.FLASHCARDS} 
+                    onClick={() => {
+                      if (studyMode !== StudyMode.FLASHCARDS) {
+                        // Mettre d'abord en place un état de chargement visuel
+                        const loadingToast = toast({
+                          title: "Chargement...",
+                          description: "Changement de mode d'étude en cours",
+                        });
+                        
+                        // Différer le changement avec un setTimeout pour permettre au DOM de se mettre à jour
+                        setTimeout(() => {
+                          try {
+                            handleStudyModeChange(StudyMode.FLASHCARDS);
+                            // Supprimer le toast de chargement après le changement
+                            setTimeout(() => loadingToast.dismiss(), 300);
+                          } catch (error) {
+                            console.error("Erreur lors du changement vers le mode flashcards:", error);
+                          }
+                        }, 100);
+                      }
+                    }}
+                  >
+                    Flashcards
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={StudyMode.QUIZ} 
+                    onClick={() => {
+                      if (studyMode !== StudyMode.QUIZ) {
+                        // Mettre d'abord en place un état de chargement visuel
+                        const loadingToast = toast({
+                          title: "Chargement...",
+                          description: "Changement de mode d'étude en cours",
+                        });
+                        
+                        // Différer le changement avec un setTimeout pour permettre au DOM de se mettre à jour
+                        setTimeout(() => {
+                          try {
+                            handleStudyModeChange(StudyMode.QUIZ);
+                            // Supprimer le toast de chargement après le changement
+                            setTimeout(() => loadingToast.dismiss(), 300);
+                          } catch (error) {
+                            console.error("Erreur lors du changement vers le mode quiz:", error);
+                          }
+                        }, 100);
+                      }
+                    }}
+                  >
+                    Quiz
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={StudyMode.WRITE} 
+                    onClick={() => {
+                      if (studyMode !== StudyMode.WRITE) {
+                        // Mettre d'abord en place un état de chargement visuel
+                        const loadingToast = toast({
+                          title: "Chargement...",
+                          description: "Changement de mode d'étude en cours",
+                        });
+                        
+                        // Différer le changement avec un setTimeout pour permettre au DOM de se mettre à jour
+                        setTimeout(() => {
+                          try {
+                            handleStudyModeChange(StudyMode.WRITE);
+                            // Supprimer le toast de chargement après le changement
+                            setTimeout(() => loadingToast.dismiss(), 300);
+                          } catch (error) {
+                            console.error("Erreur lors du changement vers le mode écriture:", error);
+                          }
+                        }, 100);
+                      }
+                    }}
+                  >
+                    Écriture
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent>
             {studyMode === StudyMode.FLASHCARDS && (
@@ -899,18 +1056,52 @@ const StudyPage = () => {
                   <Label htmlFor="quiz-check-method">
                     Méthode de vérification:
                   </Label>
-                  <Select
-                    value={quizCheckMethod}
-                    onValueChange={(value) => setQuizCheckMethod(value as QuizCheckMethod)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={QuizCheckMethod.MANUAL}>Manuelle</SelectItem>
-                      <SelectItem value={QuizCheckMethod.AUTO}>Automatique (API)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <Select
+                      value={quizCheckMethod}
+                      onValueChange={(value) => {
+                        // Afficher un toast de chargement
+                        const loadingToast = toast({
+                          title: "Chargement...",
+                          description: "Changement de méthode de vérification",
+                        });
+                        
+                        // Utiliser un setTimeout pour éviter les problèmes de rendu
+                        setTimeout(() => {
+                          try {
+                            // Stocker temporairement l'ancienne valeur
+                            const oldValue = quizCheckMethod;
+                            
+                            // Mettre à jour avec une séquence contrôlée
+                            setQuizCheckMethod(value as QuizCheckMethod);
+                            
+                            // Réinitialiser les résultats si la méthode change
+                            if (oldValue !== value) {
+                              setQuizResults({});
+                            }
+                            
+                            // Supprimer le toast après le changement
+                            setTimeout(() => loadingToast.dismiss(), 300);
+                          } catch (error) {
+                            console.error("Erreur lors du changement de méthode de vérification:", error);
+                            toast({
+                              title: "Erreur",
+                              description: "Problème lors du changement de méthode",
+                              variant: "destructive",
+                            });
+                          }
+                        }, 50);
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={QuizCheckMethod.MANUAL}>Manuelle</SelectItem>
+                        <SelectItem value={QuizCheckMethod.AUTO}>Automatique (API)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 {quizCheckMethod === QuizCheckMethod.AUTO && (
