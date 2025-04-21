@@ -28,7 +28,7 @@ export function DisplayModeToggle() {
     if (displayMode === 'auto') {
       return isScreenMobile ? 'Mode Auto (Mobile)' : 'Mode Auto (Bureau)';
     }
-    return displayMode === 'mobile' ? 'Mode Mobile' : 'Mode Bureau';
+    return displayMode === 'mobile' ? 'Mode Compact' : 'Mode Optimisé';
   };
 
   const getTooltipText = () => {
@@ -36,8 +36,8 @@ export function DisplayModeToggle() {
       return 'L\'affichage s\'adapte automatiquement à la taille de votre écran. Cliquez pour changer.';
     }
     return displayMode === 'mobile' 
-      ? 'Affichage forcé en mode mobile. Cliquez pour passer en mode bureau.'
-      : 'Affichage forcé en mode bureau. Cliquez pour passer en mode mobile.';
+      ? 'Affichage en mode compact (format mobile). Cliquez pour passer en mode optimisé.'
+      : 'Affichage en largeur optimisée pour la lecture. Cliquez pour passer en mode compact.';
   };
 
   return (

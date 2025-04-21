@@ -22,7 +22,11 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
   // Classes CSS à appliquer en fonction du mode d'affichage
   const containerClasses = [
     'bg-background min-h-screen mode-transition',
+    // Mode mobile: toujours appliquer une largeur limitée (avec ou sans mode forcé)
     isMobile ? 'mobile-mode-container mobile-view-adjustments' : '',
+    // En mode desktop: appliquer aussi une largeur contrôlée mais plus large que mobile
+    !isMobile ? 'desktop-mode-container' : '',
+    // Indicateur visuel pour les modes forcés
     isForcedMode ? 'forced-mode-border' : '',
     className
   ].filter(Boolean).join(' ');
@@ -33,8 +37,8 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
       {isForcedMode && (
         <div className="mode-message sticky top-0 z-50">
           {isMobile 
-            ? "Mode mobile" + (!isScreenMobile ? " (forcé)" : "")
-            : "Mode bureau" + (isScreenMobile ? " (forcé)" : "")
+            ? "Mode compact" + (!isScreenMobile ? " (forcé)" : "")
+            : "Mode largeur optimisée" + (isScreenMobile ? " (forcé)" : "")
           }
         </div>
       )}
@@ -52,7 +56,7 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
         >
           {isMobile ? <Smartphone size={14} /> : <Monitor size={14} />}
           <span>
-            {isMobile ? "Mode mobile" : "Mode bureau"}
+            {isMobile ? "Mode compact" : "Mode optimisé"}
           </span>
           <RefreshCw size={12} />
         </div>

@@ -13,6 +13,16 @@
   position: relative;
 }
 
+/* Conteneur de mise en page en mode bureau optimisé */
+.desktop-mode-container {
+  max-width: 800px !important; /* Largeur optimisée pour la lecture comme dans les captures d'écran */
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden;
+  position: relative;
+}
+
 /* Indicateur de mode d'affichage */
 .display-mode-indicator {
   position: fixed;
