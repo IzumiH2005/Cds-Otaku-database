@@ -1056,51 +1056,84 @@ const StudyPage = () => {
                   <Label htmlFor="quiz-check-method">
                     Méthode de vérification:
                   </Label>
-                  <div className="relative">
-                    <Select
-                      value={quizCheckMethod}
-                      onValueChange={(value) => {
-                        // Afficher un toast de chargement
-                        const loadingToast = toast({
-                          title: "Chargement...",
-                          description: "Changement de méthode de vérification",
-                        });
-                        
-                        // Utiliser un setTimeout pour éviter les problèmes de rendu
-                        setTimeout(() => {
-                          try {
-                            // Stocker temporairement l'ancienne valeur
-                            const oldValue = quizCheckMethod;
-                            
-                            // Mettre à jour avec une séquence contrôlée
-                            setQuizCheckMethod(value as QuizCheckMethod);
-                            
-                            // Réinitialiser les résultats si la méthode change
-                            if (oldValue !== value) {
-                              setQuizResults({});
+                  <div className="flex space-x-2">
+                    <Button
+                      variant={quizCheckMethod === QuizCheckMethod.MANUAL ? "default" : "outline"}
+                      className="w-[130px]"
+                      onClick={() => {
+                        if (quizCheckMethod !== QuizCheckMethod.MANUAL) {
+                          // Afficher un toast de chargement
+                          const loadingToast = toast({
+                            title: "Chargement...",
+                            description: "Passage à la méthode manuelle",
+                          });
+                          
+                          // Séquencer les changements d'état pour éviter les problèmes de rendu
+                          requestAnimationFrame(() => {
+                            try {
+                              // Désactiver tout résultat existant pour la carte actuelle
+                              const cardId = filteredCards[currentCardIndex].id;
+                              const newResults = {...quizResults};
+                              if (cardId in newResults) {
+                                delete newResults[cardId];
+                                setQuizResults(newResults);
+                              }
+                              
+                              // Changer la méthode après un court délai
+                              setTimeout(() => {
+                                setQuizCheckMethod(QuizCheckMethod.MANUAL);
+                                // Fermer le toast
+                                setTimeout(() => loadingToast.dismiss(), 200);
+                              }, 20);
+                            } catch (error) {
+                              console.error("Erreur lors du passage à la méthode manuelle:", error);
+                              loadingToast.dismiss();
                             }
-                            
-                            // Supprimer le toast après le changement
-                            setTimeout(() => loadingToast.dismiss(), 300);
-                          } catch (error) {
-                            console.error("Erreur lors du changement de méthode de vérification:", error);
-                            toast({
-                              title: "Erreur",
-                              description: "Problème lors du changement de méthode",
-                              variant: "destructive",
-                            });
-                          }
-                        }, 50);
+                          });
+                        }
                       }}
                     >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={QuizCheckMethod.MANUAL}>Manuelle</SelectItem>
-                        <SelectItem value={QuizCheckMethod.AUTO}>Automatique (API)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <span>Manuelle</span>
+                    </Button>
+                    
+                    <Button
+                      variant={quizCheckMethod === QuizCheckMethod.AUTO ? "default" : "outline"}
+                      className="w-[140px]"
+                      onClick={() => {
+                        if (quizCheckMethod !== QuizCheckMethod.AUTO) {
+                          // Afficher un toast de chargement
+                          const loadingToast = toast({
+                            title: "Chargement...",
+                            description: "Passage à la méthode automatique",
+                          });
+                          
+                          // Séquencer les changements d'état pour éviter les problèmes de rendu
+                          requestAnimationFrame(() => {
+                            try {
+                              // Désactiver tout résultat existant pour la carte actuelle
+                              const cardId = filteredCards[currentCardIndex].id;
+                              const newResults = {...quizResults};
+                              if (cardId in newResults) {
+                                delete newResults[cardId];
+                                setQuizResults(newResults);
+                              }
+                              
+                              // Changer la méthode après un court délai
+                              setTimeout(() => {
+                                setQuizCheckMethod(QuizCheckMethod.AUTO);
+                                // Fermer le toast
+                                setTimeout(() => loadingToast.dismiss(), 200);
+                              }, 20);
+                            } catch (error) {
+                              console.error("Erreur lors du passage à la méthode automatique:", error);
+                              loadingToast.dismiss();
+                            }
+                          });
+                        }
+                      }}
+                    >
+                      <span>Automatique (API)</span>
+                    </Button>
                   </div>
                 </div>
                 
