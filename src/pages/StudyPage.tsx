@@ -141,44 +141,108 @@ const StudyPage = () => {
   };
 
   const handleNextCard = () => {
-    if (currentCardIndex < filteredCards.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
-      setIsFlipped(false);
-      setShowAnswer(false);
-      setShowHint(false);
-    } else {
-      if (studyMode === StudyMode.FLASHCARDS) {
-        recordStudySession();
-        toast({
-          title: "Bravo !",
-          description: "Vous avez terminé toutes les cartes de ce deck.",
-        });
+    try {
+      if (currentCardIndex < filteredCards.length - 1) {
+        // Préparation avant le changement d'index
+        setIsFlipped(false);
+        setShowAnswer(false);
+        setShowHint(false);
+        
+        // Utiliser un setTimeout pour éviter les problèmes de rendu
+        setTimeout(() => {
+          setCurrentCardIndex(prev => prev + 1);
+        }, 50);
+      } else {
+        if (studyMode === StudyMode.FLASHCARDS) {
+          recordStudySession();
+          toast({
+            title: "Bravo !",
+            description: "Vous avez terminé toutes les cartes de ce deck.",
+          });
+        }
       }
+    } catch (error) {
+      console.error("Erreur lors du passage à la carte suivante:", error);
+      toast({
+        title: "Erreur de navigation",
+        description: "Un problème est survenu lors du passage à la carte suivante",
+        variant: "destructive",
+      });
     }
   };
 
   const handlePrevCard = () => {
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex(prev => prev - 1);
-      setIsFlipped(false);
-      setShowAnswer(false);
-      setShowHint(false);
+    try {
+      if (currentCardIndex > 0) {
+        // Préparation avant le changement d'index
+        setIsFlipped(false);
+        setShowAnswer(false);
+        setShowHint(false);
+        
+        // Utiliser un setTimeout pour éviter les problèmes de rendu
+        setTimeout(() => {
+          setCurrentCardIndex(prev => prev - 1);
+        }, 50);
+      }
+    } catch (error) {
+      console.error("Erreur lors du passage à la carte précédente:", error);
+      toast({
+        title: "Erreur de navigation",
+        description: "Un problème est survenu lors du passage à la carte précédente",
+        variant: "destructive",
+      });
     }
   };
 
   const handleCardFlip = () => {
-    setIsFlipped(!isFlipped);
-    if (!isFlipped) {
-      recordCardStudy(true);
+    try {
+      // Utiliser un setTimeout pour éviter les problèmes de rendu
+      setTimeout(() => {
+        setIsFlipped(!isFlipped);
+        if (!isFlipped) {
+          recordCardStudy(true);
+        }
+      }, 10);
+    } catch (error) {
+      console.error("Erreur lors du retournement de la carte:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors du retournement de la carte",
+        variant: "destructive",
+      });
     }
   };
 
   const handleThemeChange = (value: string) => {
-    setStudyTheme(value);
+    try {
+      // Utiliser un setTimeout pour éviter les problèmes de rendu
+      setTimeout(() => {
+        setStudyTheme(value);
+      }, 10);
+    } catch (error) {
+      console.error("Erreur lors du changement de thème:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors du changement de thème",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleShuffleToggle = () => {
-    setShuffle(!shuffle);
+    try {
+      // Utiliser un setTimeout pour éviter les problèmes de rendu
+      setTimeout(() => {
+        setShuffle(!shuffle);
+      }, 10);
+    } catch (error) {
+      console.error("Erreur lors du mélange des cartes:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors du mélange des cartes",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleStudyModeChange = (mode: StudyMode) => {
@@ -210,10 +274,14 @@ const StudyPage = () => {
   };
 
   const handleQuizAnswer = (e: React.ChangeEvent<HTMLInputElement>, cardId: string) => {
-    setQuizAnswers({
-      ...quizAnswers,
-      [cardId]: e.target.value
-    });
+    try {
+      setQuizAnswers({
+        ...quizAnswers,
+        [cardId]: e.target.value
+      });
+    } catch (error) {
+      console.error("Erreur lors de la saisie de réponse:", error);
+    }
   };
 
   const checkAnswerWithGemini = async (userAnswer: string, correctAnswer: string, cardId: string) => {
@@ -272,62 +340,109 @@ const StudyPage = () => {
   };
 
   const handleManualCheck = (cardId: string, isCorrect: boolean) => {
-    setQuizResults({
-      ...quizResults,
-      [cardId]: isCorrect
-    });
-    
-    if (isCorrect) {
-      setCorrectAnswers(prev => prev + 1);
-      recordCardStudy(true);
-    } else {
-      setIncorrectAnswers(prev => prev + 1);
-      recordCardStudy(false);
-    }
-    
-    if (currentCardIndex < filteredCards.length - 1) {
-      setTimeout(() => {
-        setCurrentCardIndex(prev => prev + 1);
-        if (answerInputRef.current) {
-          answerInputRef.current.focus();
-        }
-      }, 1000);
-    } else {
-      recordStudySession();
-      setShowResults(true);
+    try {
+      // Mettre à jour les résultats
+      setQuizResults({
+        ...quizResults,
+        [cardId]: isCorrect
+      });
+      
+      // Mettre à jour les compteurs de réponses correctes/incorrectes
+      if (isCorrect) {
+        setCorrectAnswers(prev => prev + 1);
+        recordCardStudy(true);
+      } else {
+        setIncorrectAnswers(prev => prev + 1);
+        recordCardStudy(false);
+      }
+      
+      // Passer à la carte suivante ou afficher les résultats
+      if (currentCardIndex < filteredCards.length - 1) {
+        // Utiliser un délai plus long pour permettre à l'utilisateur de voir la validation
+        setTimeout(() => {
+          // Avancer à la carte suivante
+          setCurrentCardIndex(prev => prev + 1);
+          
+          // Focus sur l'input de réponse
+          setTimeout(() => {
+            if (answerInputRef.current) {
+              answerInputRef.current.focus();
+            }
+          }, 100);
+        }, 1000);
+      } else {
+        // Enregistrer la session et afficher les résultats
+        recordStudySession();
+        
+        // Utiliser un délai pour éviter les problèmes de rendu
+        setTimeout(() => {
+          setShowResults(true);
+        }, 100);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification manuelle:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors de la vérification de la réponse",
+        variant: "destructive",
+      });
     }
   };
 
   const handleAutoCheck = async (cardId: string) => {
-    const userAnswer = quizAnswers[cardId] || '';
-    const correctAnswer = filteredCards[currentCardIndex].back.text;
-    
-    if (!userAnswer.trim()) {
-      toast({
-        title: "Réponse vide",
-        description: "Veuillez entrer une réponse avant de vérifier",
-        variant: "default",
-      });
-      return;
-    }
-    
-    if (isGeminiEnabled) {
-      const result = await checkAnswerWithGemini(userAnswer, correctAnswer, cardId);
+    try {
+      const userAnswer = quizAnswers[cardId] || '';
+      const correctAnswer = filteredCards[currentCardIndex].back.text;
       
-      if (result !== null && currentCardIndex < filteredCards.length - 1) {
-        setTimeout(() => {
-          setCurrentCardIndex(prev => prev + 1);
-          if (answerInputRef.current) {
-            answerInputRef.current.focus();
-          }
-        }, 1000);
-      } else if (result !== null && currentCardIndex === filteredCards.length - 1) {
-        recordStudySession();
-        setShowResults(true);
+      if (!userAnswer.trim()) {
+        toast({
+          title: "Réponse vide",
+          description: "Veuillez entrer une réponse avant de vérifier",
+          variant: "default",
+        });
+        return;
       }
-    } else {
-      const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-      handleManualCheck(cardId, isCorrect);
+      
+      if (isGeminiEnabled) {
+        // Vérification avec l'API Gemini
+        const result = await checkAnswerWithGemini(userAnswer, correctAnswer, cardId);
+        
+        if (result !== null) {
+          // Si ce n'est pas la dernière carte
+          if (currentCardIndex < filteredCards.length - 1) {
+            setTimeout(() => {
+              // Passer à la carte suivante en deux étapes pour éviter les problèmes de rendu
+              setCurrentCardIndex(prev => prev + 1);
+              
+              // Focus sur l'input avec un délai supplémentaire
+              setTimeout(() => {
+                if (answerInputRef.current) {
+                  answerInputRef.current.focus();
+                }
+              }, 100);
+            }, 1000);
+          } else {
+            // C'est la dernière carte, enregistrer et afficher les résultats
+            recordStudySession();
+            
+            // Utiliser un délai pour éviter les problèmes de rendu
+            setTimeout(() => {
+              setShowResults(true);
+            }, 100);
+          }
+        }
+      } else {
+        // Vérification simple par correspondance exacte
+        const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        handleManualCheck(cardId, isCorrect);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification automatique:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors de la vérification de la réponse",
+        variant: "destructive",
+      });
     }
   };
 
@@ -348,18 +463,33 @@ const StudyPage = () => {
   };
 
   const restartStudy = () => {
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-    setShowAnswer(false);
-    setShowHint(false);
-    setQuizAnswers({});
-    setQuizResults({});
-    setCorrectAnswers(0);
-    setIncorrectAnswers(0);
-    setShowResults(false);
-    
-    if (shuffle) {
-      setFilteredCards(shuffleArray([...filteredCards]));
+    try {
+      // Préparer les états pour éviter les problèmes de rendu
+      setShowResults(false);
+      setIsFlipped(false);
+      setShowAnswer(false);
+      setShowHint(false);
+      
+      // Utiliser un setTimeout pour donner le temps au changement d'état
+      setTimeout(() => {
+        setCurrentCardIndex(0);
+        setQuizAnswers({});
+        setQuizResults({});
+        setCorrectAnswers(0);
+        setIncorrectAnswers(0);
+        
+        // Si shuffle est activé, mélanger les cartes
+        if (shuffle) {
+          setFilteredCards(shuffleArray([...filteredCards]));
+        }
+      }, 50);
+    } catch (error) {
+      console.error("Erreur lors du redémarrage de l'étude:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors du redémarrage de l'étude",
+        variant: "destructive",
+      });
     }
   };
 
