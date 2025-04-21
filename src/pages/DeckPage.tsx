@@ -494,7 +494,7 @@ const DeckPage = () => {
           
           <div className="flex gap-2 mb-6">
             <Button asChild className="bg-primary hover:bg-primary/90 text-white shadow-md">
-              <Link to={`/#/deck/${id}/study`}>
+              <Link to={`/deck/${id}/study`}>
                 <BookOpen className="mr-2 h-4 w-4" />
                 Étudier
               </Link>
