@@ -182,16 +182,31 @@ const StudyPage = () => {
   };
 
   const handleStudyModeChange = (mode: StudyMode) => {
-    setStudyMode(mode);
-    setCurrentCardIndex(0);
-    setIsFlipped(false);
-    setShowAnswer(false);
-    setShowHint(false);
-    setQuizAnswers({});
-    setQuizResults({});
-    setCorrectAnswers(0);
-    setIncorrectAnswers(0);
-    setShowResults(false);
+    try {
+      setStudyMode(mode);
+      setCurrentCardIndex(0);
+      setIsFlipped(false);
+      setShowAnswer(false);
+      setShowHint(false);
+      setQuizAnswers({});
+      setQuizResults({});
+      setCorrectAnswers(0);
+      setIncorrectAnswers(0);
+      setShowResults(false);
+      
+      // Ajout d'une pause pour éviter les problèmes de rendu
+      setTimeout(() => {
+        // Force le rafraîchissement du composant
+        setFilteredCards([...filteredCards]);
+      }, 10);
+    } catch (error) {
+      console.error("Erreur lors du changement de mode d'étude:", error);
+      toast({
+        title: "Erreur",
+        description: "Un problème est survenu lors du changement de mode",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleQuizAnswer = (e: React.ChangeEvent<HTMLInputElement>, cardId: string) => {
