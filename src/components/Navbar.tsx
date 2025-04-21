@@ -3,6 +3,7 @@ import { Home, Plus, Search, User, Menu, X, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { DisplayModeToggle } from "@/components/DisplayModeToggle";
 
 const Navbar = () => {
   const location = useLocation();
@@ -43,6 +44,11 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-4">
+          {/* Display Mode Toggle for Desktop */}
+          <div className="hidden md:block">
+            <DisplayModeToggle />
+          </div>
+          
           <Button 
             variant="ghost" 
             size="icon"
@@ -77,8 +83,9 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="container pb-4 md:hidden">
           <nav className="flex flex-col space-y-4">
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm font-medium">Vue:</span>
+            <div className="flex items-center justify-between py-2 border-b mb-2 pb-3">
+              <span className="text-sm font-medium">Mode d'affichage:</span>
+              <DisplayModeToggle />
             </div>
             <Link 
               to="/" 

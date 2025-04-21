@@ -10,6 +10,7 @@ import { hasSession } from "./lib/sessionManager";
 // Components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { LayoutContainer } from "@/components/LayoutContainer";
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -37,7 +38,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
   
-  return <>{children}</>;
+  return <LayoutContainer>{children}</LayoutContainer>;
 };
 
 const App = () => {
