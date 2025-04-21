@@ -155,6 +155,18 @@ const App = () => {
                 </ProtectedRoute>
               } />
               
+              <Route path="/deck/:deckId/theme/:themeId/study" element={
+                <ProtectedRoute>
+                  <>
+                    <Navbar />
+                    <main className="flex-1">
+                      <StudyPage />
+                    </main>
+                    <Footer />
+                  </>
+                </ProtectedRoute>
+              } />
+              
               <Route path="/import/:code" element={
                 <ProtectedRoute>
                   <>

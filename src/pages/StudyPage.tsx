@@ -29,8 +29,11 @@ enum QuizCheckMethod {
 }
 
 const StudyPage = () => {
-  const { id } = useParams();
+  const { id, deckId, themeId } = useParams();
   const navigate = useNavigate();
+  
+  // Utiliser deckId s'il existe, sinon utiliser id
+  const currentDeckId = deckId || id;
   const { toast } = useToast();
   const [studyMode, setStudyMode] = useState<StudyMode>(StudyMode.FLASHCARDS);
   const [cards, setCards] = useState<Flashcard[]>([]);
@@ -61,10 +64,10 @@ const StudyPage = () => {
   const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
   useEffect(() => {
-    if (!id) return;
+    if (!currentDeckId) return;
 
     try {
-      const deckData = getDeck(id);
+      const deckData = getDeck(currentDeckId);
       if (!deckData) {
         toast({
           title: "Deck introuvable",
@@ -76,11 +79,16 @@ const StudyPage = () => {
       }
       setDeck(deckData);
 
-      const deckCards = getFlashcardsByDeck(id);
+      const deckCards = getFlashcardsByDeck(currentDeckId);
       setCards(deckCards);
 
-      const deckThemes = getThemesByDeck(id);
+      const deckThemes = getThemesByDeck(currentDeckId);
       setThemes(deckThemes);
+      
+      // Si nous avons un themeId dans l'URL, sélectionner ce thème
+      if (themeId) {
+        setStudyTheme(themeId);
+      }
 
       setFilteredCards(shuffle ? shuffleArray([...deckCards]) : [...deckCards]);
 
@@ -96,7 +104,7 @@ const StudyPage = () => {
         variant: "destructive",
       });
     }
-  }, [id, navigate, toast]);
+  }, [currentDeckId, themeId, navigate, toast]);
 
   useEffect(() => {
     if (!cards.length) return;
@@ -371,7 +379,7 @@ const StudyPage = () => {
                   : "Ce deck ne contient aucune carte. Veuillez ajouter des cartes avant d'étudier."}
               </AlertDescription>
             </Alert>
-            <Button onClick={() => navigate(`/deck/${id}`)}>
+            <Button onClick={() => navigate(`/deck/${currentDeckId}`)}>
               Retour au deck
             </Button>
           </div>
