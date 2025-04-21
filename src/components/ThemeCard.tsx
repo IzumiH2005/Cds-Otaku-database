@@ -97,87 +97,84 @@ const ThemeCard = ({
 
   return (
     <>
-      <Card className="h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+      <Card className="h-full overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
         {coverImage ? (
-          <div className="relative h-32 w-full overflow-hidden">
+          <div className="relative aspect-[1.2/1] w-full overflow-hidden">
             <img
               src={coverImage}
               alt={title}
-              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+              className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className="absolute bottom-2 left-2 text-white">
-              <span className="text-xs font-medium">{cardCount} cartes</span>
+            <div className="absolute bottom-1 left-1 text-white">
+              <span className="text-[10px] font-medium">{cardCount} cartes</span>
             </div>
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 bg-white/80 hover:bg-white"
+                className="h-6 w-6 bg-white/80 hover:bg-white"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowEditDialog(true);
                 }}
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3 w-3" />
               </Button>
               <Button
                 variant="destructive"
                 size="icon"
-                className="h-8 w-8"
+                className="h-6 w-6"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowDeleteDialog(true);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           </div>
         ) : (
-          <div className="h-32 w-full bg-gradient-to-r from-accent/30 to-primary/30 flex items-center justify-center relative">
-            <Layers className="h-12 w-12 text-primary/50" />
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <div className="aspect-[1.2/1] w-full bg-gradient-to-r from-accent/30 to-primary/30 flex items-center justify-center relative">
+            <Layers className="h-10 w-10 text-primary/50" />
+            <div className="absolute bottom-1 left-1 text-white/90">
+              <span className="text-[10px] font-medium">{cardCount} cartes</span>
+            </div>
+            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
               <Button
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 bg-white/80 hover:bg-white"
+                className="h-6 w-6 bg-white/80 hover:bg-white"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowEditDialog(true);
                 }}
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3 w-3" />
               </Button>
               <Button
                 variant="destructive"
                 size="icon"
-                className="h-8 w-8"
+                className="h-6 w-6"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowDeleteDialog(true);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           </div>
         )}
         <Link to={`/deck/${deckId}/theme/${id}`}>
-          <CardHeader className="p-4">
-            <CardTitle className="line-clamp-1 text-base">{title}</CardTitle>
-            <CardDescription className="line-clamp-2 text-xs">
+          <CardHeader className="p-3">
+            <CardTitle className="line-clamp-1 text-base font-semibold">{title}</CardTitle>
+            <CardDescription className="line-clamp-2 text-[10px]">
               {description}
             </CardDescription>
           </CardHeader>
-          <CardFooter className="flex justify-between p-4 pt-0">
-            {!coverImage && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Layers className="h-3 w-3" />
-                <span>{cardCount} cartes</span>
-              </div>
-            )}
-            <div className="ml-auto flex items-center gap-1 text-xs text-primary hover:text-primary/80">
+          <CardFooter className="flex justify-between p-2 pt-0">
+            <div className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80">
               <span>Explorer</span>
               <ArrowRight className="h-3 w-3" />
             </div>

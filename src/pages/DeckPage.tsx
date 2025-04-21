@@ -563,7 +563,7 @@ const DeckPage = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-3 gap-3">
                 {flashcards.map((card) => (
                   <FlashCardItem
                     key={card.id}
@@ -604,7 +604,7 @@ const DeckPage = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-3 gap-3">
                 {themes.map((theme) => {
                   const themeCards = flashcards.filter(card => card.themeId === theme.id);
                   return (

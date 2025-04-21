@@ -237,7 +237,7 @@ const ExplorePage = () => {
 
         <TabsContent value="all" className="mt-0">
           {filteredDecks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-3">
               {filteredDecks.map((deck) => (
                 <DeckCard key={deck.id} {...deck} />
               ))}
@@ -255,7 +255,7 @@ const ExplorePage = () => {
         </TabsContent>
 
         <TabsContent value="recent" className="mt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-3">
             {filteredDecks
               .sort((a, b) => {
                 const deckA = getDecks().find(d => d.id === a.id);
@@ -270,7 +270,7 @@ const ExplorePage = () => {
         </TabsContent>
 
         <TabsContent value="popular" className="mt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-3">
             {filteredDecks
               .sort((a, b) => b.cardCount - a.cardCount)
               .map((deck) => (
@@ -281,7 +281,7 @@ const ExplorePage = () => {
         
         <TabsContent value="shared" className="mt-0">
           {filteredDecks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-3">
               {filteredDecks
                 .filter(deck => deck.isShared)
                 .map((deck) => (
