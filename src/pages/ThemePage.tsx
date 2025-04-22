@@ -101,6 +101,19 @@ const ThemePage = () => {
     
     setIsLoading(false);
   }, [deckId, themeId, navigate, toast, user?.id]);
+  
+  // Effet pour contrôler la classe dialog-open sur le body
+  useEffect(() => {
+    if (showCardDialog) {
+      document.body.classList.add('dialog-open');
+    } else {
+      document.body.classList.remove('dialog-open');
+    }
+    
+    return () => {
+      document.body.classList.remove('dialog-open');
+    };
+  }, [showCardDialog]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
@@ -410,10 +423,11 @@ const ThemePage = () => {
       </div>
       
       {/* Add Card Dialog */}
+      
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <div className="flashcard-dialog-mobile bg-background">
+        <DialogContent className="flashcard-dialog-mobile bg-background">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-base">Ajouter une flashcard au thème {theme.title}</DialogTitle>
+            <DialogTitle className="text-base">Ajouter une flashcard au thème {theme?.title}</DialogTitle>
             <DialogDescription className="text-xs">
               Créez une nouvelle flashcard pour ce thème
             </DialogDescription>
@@ -651,7 +665,7 @@ const ThemePage = () => {
               Ajouter la carte
             </Button>
           </DialogFooter>
-        </div>
+        </DialogContent>
       </Dialog>
     </div>
   );

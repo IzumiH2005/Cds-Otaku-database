@@ -51,50 +51,50 @@ const AppWebViewProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Ajouter des styles spécifiques pour l'application
     const style = document.createElement('style');
     style.textContent = `
-      /* Styles spécifiques pour médian.co et applications Android */
-      html.android-app-mode, 
+      /* Styles spécifiques pour médian.co et applications Android - Identiques à la version web */
+      html.android-app-mode,
       html.android-app-mode body {
-        height: auto !important;
-        min-height: 100% !important;
-        overflow-y: auto !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
         overflow-x: hidden !important;
         position: relative !important;
         -webkit-overflow-scrolling: touch !important;
         overscroll-behavior: none !important;
         touch-action: pan-y !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       
-      /* Assurer que l'écran entier est scrollable */
-      html.android-app-mode .app-content {
-        min-height: 101vh !important;
-        padding-bottom: 150px !important; /* Espace supplémentaire en bas */
-        overflow-y: visible !important;
+      /* Niveaux de zoom différents - Identiques à la version web */
+      html.android-app-mode body.zoom-level-30 .app-content,
+      html.android-app-mode body.zoom-level-40 .app-content,
+      html.android-app-mode body.zoom-level-50 .app-content {
+        width: var(--content-width, 150%) !important; /* Élargissement pour compenser la petite échelle */
+        left: var(--content-left, -25%) !important;
+        position: relative !important;
+        padding-bottom: 150px !important;
       }
       
-      /* Correction pour le contrôle de zoom qui peut bloquer le défilement */
+      html.android-app-mode body.zoom-level-60 .app-content,
+      html.android-app-mode body.zoom-level-70 .app-content {
+        width: var(--content-width, 130%) !important;
+        left: var(--content-left, -15%) !important;
+        position: relative !important;
+        padding-bottom: 100px !important;
+      }
+      
+      /* Correction pour le contrôle de zoom */
       html.android-app-mode .zoom-control-container {
         position: fixed !important;
-        bottom: 20px !important;
+        bottom: 30px !important;
         z-index: 9999 !important;
         pointer-events: auto !important;
-      }
-      
-      /* Permettre le défilement complet dans les pages de flashcards */
-      html.android-app-mode .flashcard-grid {
-        padding-bottom: 200px !important;
-        overflow-y: visible !important;
       }
       
       /* S'assurer que le contenu est bien visible */
       html.android-app-mode .container {
         width: 100% !important;
         max-width: 100% !important;
-      }
-      
-      /* Adaptation spéciale pour le zoom à 50% */
-      html.android-app-mode body.zoom-level-50 .app-content {
-        min-height: calc(150vh) !important;
-        padding-bottom: 300px !important;
       }
     `;
     document.head.appendChild(style);

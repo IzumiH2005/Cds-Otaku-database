@@ -80,8 +80,6 @@ const DeckPage = () => {
   });
   
   const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [showFrontAdditionalInfo, setShowFrontAdditionalInfo] = useState(false);
-  const [showBackAdditionalInfo, setShowBackAdditionalInfo] = useState(false);
   
   useEffect(() => {
     if (!id) return;
@@ -307,9 +305,7 @@ const DeckPage = () => {
       return;
     }
     
-    // Réinitialiser les états d'informations supplémentaires
-    setShowFrontAdditionalInfo(false);
-    setShowBackAdditionalInfo(false);
+    // Créer la carte sans informations supplémentaires
     
     try {
       const card = createFlashcard({

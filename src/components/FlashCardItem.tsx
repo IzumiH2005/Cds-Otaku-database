@@ -303,34 +303,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox 
-                  id="show-front-additional-info" 
-                  checked={showFrontAdditionalInfo}
-                  onCheckedChange={(checked) => {
-                    setShowFrontAdditionalInfo(checked as boolean);
-                  }}
-                />
-                <Label htmlFor="show-front-additional-info">Ajouter des informations supplémentaires</Label>
-              </div>
-
-              {showFrontAdditionalInfo && (
-                <div className="space-y-2">
-                  <Label htmlFor="front-additional-info">Informations supplémentaires</Label>
-                  <Textarea
-                    id="front-additional-info"
-                    rows={3}
-                    value={editingCard.front.additionalInfo}
-                    onChange={(e) =>
-                      setEditingCard({
-                        ...editingCard,
-                        front: { ...editingCard.front, additionalInfo: e.target.value },
-                      })
-                    }
-                    placeholder="Ajoutez des notes, contexte ou détails complémentaires..."
-                  />
-                </div>
-              )}
+              {/* Option d'informations supplémentaires retirée */}
             </div>
 
             <div className="space-y-4 border p-4 rounded-lg">
@@ -407,34 +380,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox 
-                  id="show-back-additional-info" 
-                  checked={showBackAdditionalInfo}
-                  onCheckedChange={(checked) => {
-                    setShowBackAdditionalInfo(checked as boolean);
-                  }}
-                />
-                <Label htmlFor="show-back-additional-info">Ajouter des informations supplémentaires</Label>
-              </div>
-
-              {showBackAdditionalInfo && (
-                <div className="space-y-2">
-                  <Label htmlFor="back-additional-info">Informations supplémentaires</Label>
-                  <Textarea
-                    id="back-additional-info"
-                    rows={3}
-                    value={editingCard.back.additionalInfo}
-                    onChange={(e) =>
-                      setEditingCard({
-                        ...editingCard,
-                        back: { ...editingCard.back, additionalInfo: e.target.value },
-                      })
-                    }
-                    placeholder="Ajoutez des notes, contexte ou détails complémentaires..."
-                  />
-                </div>
-              )}
+              {/* Option d'informations supplémentaires retirée */}
             </div>
           </div>
           <DialogFooter>
