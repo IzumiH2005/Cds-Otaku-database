@@ -1,18 +1,13 @@
 /**
- * Adaptateur de stockage qui encapsule l'accès à localStorage ou IndexedDB
- * selon la configuration et la disponibilité.
+ * Adaptateur de stockage utilisant IndexedDB pour stocker de grandes quantités de données.
  * 
- * Ce module fournit une API cohérente quel que soit le backend utilisé,
- * permettant ainsi une transition en douceur entre les différentes
- * méthodes de stockage.
+ * Ce module utilise IndexedDB pour le stockage des données, permettant de gérer
+ * des milliers de flashcards et d'autres objets sans limitation de taille.
  */
 
 import * as LocalStorage from './localStorage';
 import * as IndexedDB from './indexedDB';
 import { User, Deck, Theme, Flashcard, SharedDeckExport } from './localStorage';
-
-// Flag pour activer/désactiver l'utilisation d'IndexedDB
-let useIndexedDB = true;
 
 // Flag pour suivre l'état de migration
 let migrationCompleted = false;
@@ -25,297 +20,283 @@ let migrationCompleted = false;
 export async function initStorageAdapter(): Promise<void> {
   // Vérifier si IndexedDB est supporté par le navigateur
   if (!window.indexedDB) {
-    console.warn('IndexedDB n\'est pas supporté par ce navigateur. Utilisation de localStorage.');
-    useIndexedDB = false;
+    console.error('IndexedDB n\'est pas supporté par ce navigateur. L\'application pourrait ne pas fonctionner correctement.');
+    // Continuer quand même avec les fonctions IndexedDB, qui géreront les erreurs et fourniront des valeurs par défaut
     return;
   }
   
   // Vérifier si la migration a déjà été effectuée
   migrationCompleted = localStorage.getItem('indexeddb-migration-completed') === 'true';
   
-  // Si on veut utiliser IndexedDB et que la migration n'a pas été faite
-  if (useIndexedDB && !migrationCompleted) {
+  // Si la migration n'a pas été faite
+  if (!migrationCompleted) {
     try {
       console.log('Migration des données de localStorage vers IndexedDB...');
       await IndexedDB.migrateFromLocalStorage();
       migrationCompleted = true;
+      localStorage.setItem('indexeddb-migration-completed', 'true');
       console.log('Migration terminée avec succès!');
     } catch (error) {
       console.error('Erreur lors de la migration vers IndexedDB:', error);
-      console.warn('Retour à localStorage suite à une erreur de migration.');
-      useIndexedDB = false;
+      // Quand même continuer avec IndexedDB, les fonctions géreront les erreurs
     }
-  }
-}
-
-/**
- * Change le backend de stockage utilisé
- * @param useIDB True pour utiliser IndexedDB, false pour utiliser localStorage
- */
-export function setStorageBackend(useIDB: boolean): void {
-  // Ne pas changer pour IndexedDB si la migration n'a pas été effectuée
-  if (useIDB && !migrationCompleted) {
-    console.warn('Impossible d\'utiliser IndexedDB sans migration préalable.');
-    return;
-  }
-  
-  useIndexedDB = useIDB;
-  console.log(`Stockage réglé sur: ${useIDB ? 'IndexedDB' : 'localStorage'}`);
-}
-
-/**
- * Méthode d'assistance pour appeler la fonction appropriée en fonction du backend
- */
-async function callAppropriateFunction<T>(
-  localStorageFunction: (...args: any[]) => T,
-  indexedDBFunction: (...args: any[]) => Promise<T>,
-  ...args: any[]
-): Promise<T> {
-  if (useIndexedDB) {
-    try {
-      return await indexedDBFunction(...args);
-    } catch (error) {
-      console.error('Erreur avec IndexedDB, fallback sur localStorage:', error);
-      return localStorageFunction(...args);
-    }
-  } else {
-    return localStorageFunction(...args);
   }
 }
 
 // Fonctions User
 export async function getUser(): Promise<User | null> {
-  return await callAppropriateFunction(
-    LocalStorage.getUser,
-    IndexedDB.getUser
-  );
+  try {
+    return await IndexedDB.getUser();
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+    return null;
+  }
 }
 
 export async function setUser(user: User): Promise<void> {
-  if (useIndexedDB) {
+  try {
     await IndexedDB.setUser(user);
-  } else {
-    LocalStorage.setUser(user);
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde de l\'utilisateur:', error);
   }
 }
 
 export async function updateUser(userData: Partial<User>): Promise<User | null> {
-  return await callAppropriateFunction(
-    LocalStorage.updateUser,
-    IndexedDB.updateUser,
-    userData
-  );
+  try {
+    return await IndexedDB.updateUser(userData);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
+    return null;
+  }
 }
 
 // Fonctions Deck
 export async function getDecks(): Promise<Deck[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getDecks,
-    IndexedDB.getDecks
-  );
+  try {
+    return await IndexedDB.getDecks();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des decks:', error);
+    return [];
+  }
 }
 
 export async function getDeck(id: string): Promise<Deck | null> {
-  return await callAppropriateFunction(
-    LocalStorage.getDeck,
-    IndexedDB.getDeck,
-    id
-  );
+  try {
+    return await IndexedDB.getDeck(id);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération du deck ${id}:`, error);
+    return null;
+  }
 }
 
 export async function createDeck(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {
-  return await callAppropriateFunction(
-    LocalStorage.createDeck,
-    IndexedDB.createDeck,
-    deck
-  );
+  try {
+    return await IndexedDB.createDeck(deck);
+  } catch (error) {
+    console.error('Erreur lors de la création du deck:', error);
+    throw new Error('Impossible de créer le deck');
+  }
 }
 
 export async function updateDeck(id: string, deckData: Partial<Deck>): Promise<Deck | null> {
-  return await callAppropriateFunction(
-    LocalStorage.updateDeck,
-    IndexedDB.updateDeck,
-    id,
-    deckData
-  );
+  try {
+    return await IndexedDB.updateDeck(id, deckData);
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour du deck ${id}:`, error);
+    return null;
+  }
 }
 
 export async function deleteDeck(id: string): Promise<boolean> {
-  return await callAppropriateFunction(
-    LocalStorage.deleteDeck,
-    IndexedDB.deleteDeck,
-    id
-  );
+  try {
+    return await IndexedDB.deleteDeck(id);
+  } catch (error) {
+    console.error(`Erreur lors de la suppression du deck ${id}:`, error);
+    return false;
+  }
 }
 
 // Fonctions Theme
 export async function getThemes(): Promise<Theme[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getThemes,
-    IndexedDB.getThemes
-  );
+  try {
+    return await IndexedDB.getThemes();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des thèmes:', error);
+    return [];
+  }
 }
 
 export async function getThemesByDeck(deckId: string): Promise<Theme[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getThemesByDeck,
-    IndexedDB.getThemesByDeck,
-    deckId
-  );
+  try {
+    return await IndexedDB.getThemesByDeck(deckId);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération des thèmes du deck ${deckId}:`, error);
+    return [];
+  }
 }
 
 export async function getTheme(id: string): Promise<Theme | undefined> {
-  return await callAppropriateFunction(
-    LocalStorage.getTheme,
-    IndexedDB.getTheme,
-    id
-  );
+  try {
+    return await IndexedDB.getTheme(id);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération du thème ${id}:`, error);
+    return undefined;
+  }
 }
 
 export async function createTheme(theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>): Promise<Theme> {
-  return await callAppropriateFunction(
-    LocalStorage.createTheme,
-    IndexedDB.createTheme,
-    theme
-  );
+  try {
+    return await IndexedDB.createTheme(theme);
+  } catch (error) {
+    console.error('Erreur lors de la création du thème:', error);
+    throw new Error('Impossible de créer le thème');
+  }
 }
 
 export async function updateTheme(id: string, themeData: Partial<Theme>): Promise<Theme | null> {
-  return await callAppropriateFunction(
-    LocalStorage.updateTheme,
-    IndexedDB.updateTheme,
-    id,
-    themeData
-  );
+  try {
+    return await IndexedDB.updateTheme(id, themeData);
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour du thème ${id}:`, error);
+    return null;
+  }
 }
 
 export async function deleteTheme(id: string): Promise<boolean> {
-  return await callAppropriateFunction(
-    LocalStorage.deleteTheme,
-    IndexedDB.deleteTheme,
-    id
-  );
+  try {
+    return await IndexedDB.deleteTheme(id);
+  } catch (error) {
+    console.error(`Erreur lors de la suppression du thème ${id}:`, error);
+    return false;
+  }
 }
 
 // Fonctions Flashcard
 export async function getFlashcards(): Promise<Flashcard[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getFlashcards,
-    IndexedDB.getFlashcards
-  );
+  try {
+    return await IndexedDB.getFlashcards();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des flashcards:', error);
+    return [];
+  }
 }
 
 export async function getFlashcardsByDeck(deckId: string): Promise<Flashcard[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getFlashcardsByDeck,
-    IndexedDB.getFlashcardsByDeck,
-    deckId
-  );
+  try {
+    return await IndexedDB.getFlashcardsByDeck(deckId);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération des flashcards du deck ${deckId}:`, error);
+    return [];
+  }
 }
 
 export async function getFlashcardsByTheme(themeId: string): Promise<Flashcard[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getFlashcardsByTheme,
-    IndexedDB.getFlashcardsByTheme,
-    themeId
-  );
+  try {
+    return await IndexedDB.getFlashcardsByTheme(themeId);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération des flashcards du thème ${themeId}:`, error);
+    return [];
+  }
 }
 
 export async function getFlashcard(id: string): Promise<Flashcard | undefined> {
-  return await callAppropriateFunction(
-    LocalStorage.getFlashcard,
-    IndexedDB.getFlashcard,
-    id
-  );
+  try {
+    return await IndexedDB.getFlashcard(id);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération de la flashcard ${id}:`, error);
+    return undefined;
+  }
 }
 
 export async function createFlashcard(flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flashcard> {
-  return await callAppropriateFunction(
-    LocalStorage.createFlashcard,
-    IndexedDB.createFlashcard,
-    flashcard
-  );
+  try {
+    return await IndexedDB.createFlashcard(flashcard);
+  } catch (error) {
+    console.error('Erreur lors de la création de la flashcard:', error);
+    throw new Error('Impossible de créer la flashcard');
+  }
 }
 
 export async function updateFlashcard(id: string, cardData: Partial<Flashcard>): Promise<Flashcard | null> {
-  return await callAppropriateFunction(
-    LocalStorage.updateFlashcard,
-    IndexedDB.updateFlashcard,
-    id,
-    cardData
-  );
+  try {
+    return await IndexedDB.updateFlashcard(id, cardData);
+  } catch (error) {
+    console.error(`Erreur lors de la mise à jour de la flashcard ${id}:`, error);
+    return null;
+  }
 }
 
 export async function deleteFlashcard(id: string): Promise<boolean> {
-  return await callAppropriateFunction(
-    LocalStorage.deleteFlashcard,
-    IndexedDB.deleteFlashcard,
-    id
-  );
+  try {
+    return await IndexedDB.deleteFlashcard(id);
+  } catch (error) {
+    console.error(`Erreur lors de la suppression de la flashcard ${id}:`, error);
+    return false;
+  }
 }
 
 // Fonctions SharedDeck
 export async function getSharedDeckCodes(): Promise<any[]> {
-  return await callAppropriateFunction(
-    LocalStorage.getSharedDeckCodes,
-    IndexedDB.getSharedDeckCodes
-  );
+  try {
+    return await IndexedDB.getSharedDeckCodes();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des codes de partage:', error);
+    return [];
+  }
 }
 
 export async function createShareCode(deckId: string, expiresInDays?: number): Promise<string> {
-  return await callAppropriateFunction(
-    LocalStorage.createShareCode,
-    IndexedDB.createShareCode,
-    deckId,
-    expiresInDays
-  );
+  try {
+    return await IndexedDB.createShareCode(deckId, expiresInDays);
+  } catch (error) {
+    console.error(`Erreur lors de la création du code de partage pour le deck ${deckId}:`, error);
+    throw new Error('Impossible de créer le code de partage');
+  }
 }
 
 export async function getSharedDeck(code: string): Promise<Deck | undefined> {
-  return await callAppropriateFunction(
-    LocalStorage.getSharedDeck,
-    IndexedDB.getSharedDeck,
-    code
-  );
+  try {
+    return await IndexedDB.getSharedDeck(code);
+  } catch (error) {
+    console.error(`Erreur lors de la récupération du deck partagé avec le code ${code}:`, error);
+    return undefined;
+  }
 }
 
 // Fonctions d'export/import de decks
 export async function exportDeckToJson(deckId: string): Promise<SharedDeckExport> {
-  return await callAppropriateFunction(
-    LocalStorage.exportDeckToJson,
-    IndexedDB.exportDeckToJson,
-    deckId
-  );
+  try {
+    return await IndexedDB.exportDeckToJson(deckId);
+  } catch (error) {
+    console.error(`Erreur lors de l'export du deck ${deckId} en JSON:`, error);
+    throw new Error('Impossible d\'exporter le deck');
+  }
 }
 
 export async function importDeckFromJson(sharedDeckData: SharedDeckExport, authorId: string): Promise<string> {
-  return await callAppropriateFunction(
-    LocalStorage.importDeckFromJson,
-    IndexedDB.importDeckFromJson,
-    sharedDeckData,
-    authorId
-  );
+  try {
+    return await IndexedDB.importDeckFromJson(sharedDeckData, authorId);
+  } catch (error) {
+    console.error('Erreur lors de l\'import du deck:', error);
+    throw new Error('Impossible d\'importer le deck');
+  }
 }
 
 export async function updateDeckFromJson(sharedDeckData: SharedDeckExport): Promise<boolean> {
-  return await callAppropriateFunction(
-    LocalStorage.updateDeckFromJson,
-    IndexedDB.updateDeckFromJson,
-    sharedDeckData
-  );
+  try {
+    return await IndexedDB.updateDeckFromJson(sharedDeckData);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du deck depuis le JSON:', error);
+    return false;
+  }
 }
 
 // Fonctions pour les decks partagés importés
 export async function getSharedImportedDecks(): Promise<{originalId: string, localDeckId: string}[]> {
-  // Cette fonction a besoin d'être adaptée car l'implémentation diffère entre localStorage et IndexedDB
-  if (useIndexedDB) {
-    try {
-      return await IndexedDB.getSharedImportedDecks();
-    } catch (error) {
-      console.error('Erreur avec IndexedDB, fallback sur localStorage:', error);
-      return LocalStorage.getSharedImportedDecks();
-    }
-  } else {
-    return LocalStorage.getSharedImportedDecks();
+  try {
+    return await IndexedDB.getSharedImportedDecks();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des decks importés:', error);
+    return [];
   }
 }

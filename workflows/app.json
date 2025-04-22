@@ -1,0 +1,8 @@
+{
+  "commands": {
+    "start": "npm run dev"
+  },
+  "resources": {
+    "activePort": 3000
+  }
+}

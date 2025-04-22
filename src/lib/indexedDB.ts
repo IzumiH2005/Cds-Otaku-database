@@ -640,8 +640,27 @@ export async function getFlashcards(): Promise<Flashcard[]> {
 
 export async function getFlashcardsByDeck(deckId: string): Promise<Flashcard[]> {
   try {
-    const flashcards = await getFlashcards();
-    return flashcards.filter(card => card.deckId === deckId);
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.FLASHCARDS, 'readonly');
+      const store = transaction.objectStore(STORES.FLASHCARDS);
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        const allFlashcards = request.result || [];
+        // Filtrer côté client - dans une version future on pourrait 
+        // ajouter un index sur deckId pour des performances optimales
+        const filteredFlashcards = allFlashcards.filter(card => card.deckId === deckId);
+        resolve(filteredFlashcards);
+        db.close();
+      };
+      
+      request.onerror = (event) => {
+        console.error(`Erreur lors de la récupération des flashcards pour le deck ${deckId}:`, event);
+        reject(`Erreur lors de la récupération des flashcards pour le deck ${deckId}`);
+        db.close();
+      };
+    });
   } catch (error) {
     console.error(`Erreur lors de la récupération des flashcards pour le deck ${deckId}:`, error);
     return [];
@@ -650,8 +669,26 @@ export async function getFlashcardsByDeck(deckId: string): Promise<Flashcard[]> 
 
 export async function getFlashcardsByTheme(themeId: string): Promise<Flashcard[]> {
   try {
-    const flashcards = await getFlashcards();
-    return flashcards.filter(card => card.themeId === themeId);
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.FLASHCARDS, 'readonly');
+      const store = transaction.objectStore(STORES.FLASHCARDS);
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        const allFlashcards = request.result || [];
+        // Filtrer côté client pour ce thème spécifique
+        const filteredFlashcards = allFlashcards.filter(card => card.themeId === themeId);
+        resolve(filteredFlashcards);
+        db.close();
+      };
+      
+      request.onerror = (event) => {
+        console.error(`Erreur lors de la récupération des flashcards pour le thème ${themeId}:`, event);
+        reject(`Erreur lors de la récupération des flashcards pour le thème ${themeId}`);
+        db.close();
+      };
+    });
   } catch (error) {
     console.error(`Erreur lors de la récupération des flashcards pour le thème ${themeId}:`, error);
     return [];

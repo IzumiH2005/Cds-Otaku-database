@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { generateSampleData } from "./lib/localStorage";
-import { initStorageAdapter } from "./lib/storageAdapter";
+import { initStorageAdapter, getDecks } from "./lib/storageAdapter";
 import { hasSession } from "./lib/sessionManager";
 
 // Components
@@ -46,17 +46,26 @@ const App = () => {
   const [storageInitialized, setStorageInitialized] = useState(false);
 
   useEffect(() => {
-    // Initialiser l'adaptateur de stockage (IndexedDB ou localStorage)
+    // Initialiser l'adaptateur de stockage (IndexedDB)
     const initStorage = async () => {
       try {
         await initStorageAdapter();
-        console.log('Adaptateur de stockage initialisé avec succès');
-        // Initialize storage structure on first load (using the adapter)
-        generateSampleData();
+        console.log('Adaptateur de stockage IndexedDB initialisé avec succès');
+        
+        // Vérifier si des données existent déjà
+        const existingDecks = await getDecks();
+        if (existingDecks.length === 0) {
+          console.log('Aucun deck trouvé, génération de données d\'exemple...');
+          // Seulement générer des données de test si aucune n'existe
+          generateSampleData();
+        }
+        
         setStorageInitialized(true);
       } catch (error) {
         console.error('Erreur lors de l\'initialisation de l\'adaptateur de stockage:', error);
-        // Continuer avec localStorage uniquement
+        
+        // En cas d'erreur grave, générer quand même des données de test comme fallback
+        console.warn('Génération de données de secours...');
         generateSampleData();
         setStorageInitialized(true);
       }
