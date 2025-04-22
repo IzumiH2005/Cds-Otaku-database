@@ -5,9 +5,9 @@
 /**
  * Constantes pour la pagination et la segmentation des données
  */
-const MAX_ITEMS_PER_SEGMENT = 100; // Augmenté pour éviter de trop segmenter
+const MAX_ITEMS_PER_SEGMENT = 20; // Optimisé pour les flashcards (20 par segment)
 const PREFIX_SEGMENT = "_s"; // Préfixe compatible avec les anciennes données
-const MAX_SEGMENTS = 100; // Limite raisonnable de segments
+const MAX_SEGMENTS = 200; // Augmenté pour permettre plus de données
 
 /**
  * Sauvegarde des données en les segmentant si nécessaire

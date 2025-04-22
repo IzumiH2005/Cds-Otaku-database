@@ -261,12 +261,75 @@ export const deleteTheme = (id: string): boolean => {
 
 // Flashcard functions
 export const getFlashcards = (): Flashcard[] => {
-  return getItem<Flashcard[]>(STORAGE_KEYS.FLASHCARDS, []);
+  // Récupérer les flashcards standards
+  const standardFlashcards = getItem<Flashcard[]>(STORAGE_KEYS.FLASHCARDS, []);
+  
+  // Vérifier s'il y a des segments spéciaux par deck
+  let specialSegments: {[deckId: string]: boolean} = {};
+  try {
+    const segmentationData = localStorage.getItem('flashcards_segmentation');
+    if (segmentationData) {
+      specialSegments = JSON.parse(segmentationData);
+    }
+  } catch (e) {
+    console.error('Erreur lors de la lecture des segments spéciaux:', e);
+  }
+  
+  // Récupérer les flashcards des segments spéciaux
+  let allSpecialFlashcards: Flashcard[] = [];
+  
+  for (const deckId of Object.keys(specialSegments)) {
+    try {
+      const deckSpecificKey = `${STORAGE_KEYS.FLASHCARDS}_deck_${deckId}`;
+      const deckSegmentData = localStorage.getItem(deckSpecificKey);
+      
+      if (deckSegmentData) {
+        const deckFlashcards = JSON.parse(deckSegmentData);
+        allSpecialFlashcards = allSpecialFlashcards.concat(deckFlashcards);
+      }
+    } catch (e) {
+      console.error(`Erreur lors de la lecture du segment pour le deck ${deckId}:`, e);
+    }
+  }
+  
+  // Combiner toutes les flashcards
+  return [...standardFlashcards, ...allSpecialFlashcards];
 };
 
 export const getFlashcardsByDeck = (deckId: string): Flashcard[] => {
-  const flashcards = getFlashcards();
-  return flashcards.filter(card => card.deckId === deckId);
+  // Vérifier s'il y a un segment spécial pour ce deck
+  let specialSegments: {[deckId: string]: boolean} = {};
+  try {
+    const segmentationData = localStorage.getItem('flashcards_segmentation');
+    if (segmentationData) {
+      specialSegments = JSON.parse(segmentationData);
+    }
+  } catch (e) {
+    console.error('Erreur lors de la lecture des segments spéciaux:', e);
+  }
+  
+  let deckFlashcards: Flashcard[] = [];
+  
+  // Si ce deck a un segment spécial, récupérer les cartes depuis ce segment
+  if (specialSegments[deckId]) {
+    try {
+      const deckSpecificKey = `${STORAGE_KEYS.FLASHCARDS}_deck_${deckId}`;
+      const deckSegmentData = localStorage.getItem(deckSpecificKey);
+      
+      if (deckSegmentData) {
+        deckFlashcards = JSON.parse(deckSegmentData);
+      }
+    } catch (e) {
+      console.error(`Erreur lors de la lecture du segment pour le deck ${deckId}:`, e);
+    }
+  }
+  
+  // Récupérer aussi les cartes du stockage standard
+  const standardFlashcards = getItem<Flashcard[]>(STORAGE_KEYS.FLASHCARDS, []);
+  const standardDeckFlashcards = standardFlashcards.filter(card => card.deckId === deckId);
+  
+  // Combiner les deux ensembles de cartes
+  return [...standardDeckFlashcards, ...deckFlashcards];
 };
 
 export const getFlashcardsByTheme = (themeId: string): Flashcard[] => {
@@ -280,7 +343,6 @@ export const getFlashcard = (id: string): Flashcard | undefined => {
 };
 
 export const createFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard => {
-  const flashcards = getFlashcards();
   const now = new Date().toISOString();
   
   const newFlashcard: Flashcard = {
@@ -290,25 +352,88 @@ export const createFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 
     updatedAt: now,
   };
   
-  // Utiliser directement addItem de enhancedLocalStorage pour garantir le bon fonctionnement de la segmentation
-  addItem(STORAGE_KEYS.FLASHCARDS, newFlashcard, []);
+  // Récupérer les flashcards par deck pour optimiser la segmentation
+  const deckFlashcards = getFlashcardsByDeck(flashcard.deckId);
+  
+  // Si on a beaucoup de flashcards dans ce deck, on utilise une segmentation optimisée
+  if (deckFlashcards.length >= 15) {
+    console.log(`Ce deck contient déjà ${deckFlashcards.length} flashcards, utilisation de la segmentation optimisée`);
+    
+    // On utilise une clé spécifique au deck pour la segmentation
+    const deckSpecificKey = `${STORAGE_KEYS.FLASHCARDS}_deck_${flashcard.deckId}`;
+    
+    // On stocke la carte dans ce segment spécifique au deck
+    const deckSegment = localStorage.getItem(deckSpecificKey) ? 
+      JSON.parse(localStorage.getItem(deckSpecificKey) || '[]') : [];
+    
+    deckSegment.push(newFlashcard);
+    localStorage.setItem(deckSpecificKey, JSON.stringify(deckSegment));
+    
+    // On mémorise qu'on utilise une segmentation spéciale pour ce deck
+    let specialSegments = localStorage.getItem('flashcards_segmentation') ?
+      JSON.parse(localStorage.getItem('flashcards_segmentation') || '{}') : {};
+    
+    if (!specialSegments[flashcard.deckId]) {
+      specialSegments[flashcard.deckId] = true;
+      localStorage.setItem('flashcards_segmentation', JSON.stringify(specialSegments));
+    }
+  } else {
+    // Sinon, on utilise la méthode standard
+    addItem(STORAGE_KEYS.FLASHCARDS, newFlashcard, []);
+  }
+  
   return newFlashcard;
 };
 
 export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
   const flashcards = getFlashcards();
-  const cardIndex = flashcards.findIndex(card => card.id === id);
+  const foundCard = flashcards.find(card => card.id === id);
   
-  if (cardIndex === -1) return null;
+  if (!foundCard) return null;
   
   const updatedCard = { 
-    ...flashcards[cardIndex], 
+    ...foundCard, 
     ...cardData, 
     updatedAt: new Date().toISOString() 
   };
   
-  // Utiliser updateItem de enhancedLocalStorage pour mise à jour optimisée
-  updateItem(
+  // Vérifier s'il y a un segment spécial pour le deck de cette carte
+  let specialSegments: {[deckId: string]: boolean} = {};
+  try {
+    const segmentationData = localStorage.getItem('flashcards_segmentation');
+    if (segmentationData) {
+      specialSegments = JSON.parse(segmentationData);
+    }
+  } catch (e) {
+    console.error('Erreur lors de la lecture des segments spéciaux:', e);
+  }
+  
+  const deckId = foundCard.deckId;
+  
+  if (specialSegments[deckId]) {
+    // Mettre à jour la carte dans le segment spécial
+    try {
+      const deckSpecificKey = `${STORAGE_KEYS.FLASHCARDS}_deck_${deckId}`;
+      const deckSegmentData = localStorage.getItem(deckSpecificKey);
+      
+      if (deckSegmentData) {
+        const deckFlashcards = JSON.parse(deckSegmentData);
+        const cardIndex = deckFlashcards.findIndex((card: Flashcard) => card.id === id);
+        
+        if (cardIndex !== -1) {
+          // Mettre à jour la carte dans ce segment
+          deckFlashcards[cardIndex] = updatedCard;
+          localStorage.setItem(deckSpecificKey, JSON.stringify(deckFlashcards));
+          return updatedCard;
+        }
+      }
+    } catch (e) {
+      console.error(`Erreur lors de la mise à jour dans le segment pour le deck ${deckId}:`, e);
+    }
+  }
+  
+  // Sinon, essayer de mettre à jour dans le stockage standard
+  const standardUpdated = updateItem(
     STORAGE_KEYS.FLASHCARDS,
     id,
     () => updatedCard,
@@ -316,11 +441,51 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
     []
   );
   
-  return updatedCard;
+  return standardUpdated ? updatedCard : null;
 };
 
 export const deleteFlashcard = (id: string): boolean => {
-  // Utiliser removeItem de enhancedLocalStorage pour suppression optimisée
+  const flashcards = getFlashcards();
+  const foundCard = flashcards.find(card => card.id === id);
+  
+  if (!foundCard) return false;
+  
+  // Vérifier s'il y a un segment spécial pour le deck de cette carte
+  let specialSegments: {[deckId: string]: boolean} = {};
+  try {
+    const segmentationData = localStorage.getItem('flashcards_segmentation');
+    if (segmentationData) {
+      specialSegments = JSON.parse(segmentationData);
+    }
+  } catch (e) {
+    console.error('Erreur lors de la lecture des segments spéciaux:', e);
+  }
+  
+  const deckId = foundCard.deckId;
+  
+  if (specialSegments[deckId]) {
+    // Supprimer la carte du segment spécial
+    try {
+      const deckSpecificKey = `${STORAGE_KEYS.FLASHCARDS}_deck_${deckId}`;
+      const deckSegmentData = localStorage.getItem(deckSpecificKey);
+      
+      if (deckSegmentData) {
+        const deckFlashcards = JSON.parse(deckSegmentData);
+        const cardIndex = deckFlashcards.findIndex((card: Flashcard) => card.id === id);
+        
+        if (cardIndex !== -1) {
+          // Supprimer la carte de ce segment
+          deckFlashcards.splice(cardIndex, 1);
+          localStorage.setItem(deckSpecificKey, JSON.stringify(deckFlashcards));
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error(`Erreur lors de la suppression dans le segment pour le deck ${deckId}:`, e);
+    }
+  }
+  
+  // Sinon, essayer de supprimer dans le stockage standard
   return removeItem(
     STORAGE_KEYS.FLASHCARDS,
     id,

@@ -3,8 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { generateSampleData } from "./lib/localStorage";
+import { initStorageAdapter } from "./lib/storageAdapter";
 import { hasSession } from "./lib/sessionManager";
 
 // Components
@@ -42,9 +43,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
+  const [storageInitialized, setStorageInitialized] = useState(false);
+
   useEffect(() => {
-    // Initialize storage structure on first load
-    generateSampleData();
+    // Initialiser l'adaptateur de stockage (IndexedDB ou localStorage)
+    const initStorage = async () => {
+      try {
+        await initStorageAdapter();
+        console.log('Adaptateur de stockage initialisé avec succès');
+        // Initialize storage structure on first load (using the adapter)
+        generateSampleData();
+        setStorageInitialized(true);
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation de l\'adaptateur de stockage:', error);
+        // Continuer avec localStorage uniquement
+        generateSampleData();
+        setStorageInitialized(true);
+      }
+    };
+    
+    initStorage();
   }, []);
 
   return (
