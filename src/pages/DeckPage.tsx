@@ -684,7 +684,7 @@ const DeckPage = () => {
       </Dialog>
       
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <div className="flashcard-dialog-mobile bg-background">
+        <DialogContent className="flashcard-dialog-mobile bg-background">
           <DialogHeader className="pb-1">
             <DialogTitle className="text-base">Ajouter une flashcard</DialogTitle>
             <DialogDescription className="text-xs">
