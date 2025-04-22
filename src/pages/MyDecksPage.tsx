@@ -102,43 +102,43 @@ const MyDecksPage = () => {
   }, [decks]);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Mes Decks</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={refreshDecks}>
-            <RefreshCcw className="mr-2 h-4 w-4" />
+    <div className="w-full px-1 py-3">
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="text-xl font-bold">Mes Decks</h1>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" onClick={refreshDecks} className="h-8 text-xs px-2">
+            <RefreshCcw className="mr-1 h-3 w-3" />
             Actualiser
           </Button>
-          <Button asChild>
+          <Button asChild size="sm" className="h-8 text-xs px-2">
             <Link to="/create">
-              <Plus className="mr-2 h-4 w-4" />
-              Créer un nouveau deck
+              <Plus className="mr-1 h-3 w-3" />
+              Créer un deck
             </Link>
           </Button>
         </div>
       </div>
       
-      <div className="flex justify-end items-center mb-6">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex justify-end items-center mb-2">
+        <div className="text-xs text-muted-foreground">
           {decks.length} deck{decks.length !== 1 ? "s" : ""}
         </div>
       </div>
 
       {decks.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
+        <div className="text-center py-6">
+          <p className="text-muted-foreground text-sm mb-3">
             Vous n'avez pas encore créé de decks.
           </p>
-          <Button asChild>
+          <Button asChild size="sm" className="h-8 text-xs px-2">
             <Link to="/create">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-1 h-3 w-3" />
               Créer votre premier deck
             </Link>
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-3 gap-1 xxs:gap-2 xs:gap-2 sm:gap-3 md:gap-4">
           {decks.map(deck => (
             <DeckCard 
               key={deck.id}
