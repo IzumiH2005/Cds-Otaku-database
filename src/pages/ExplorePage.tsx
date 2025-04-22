@@ -153,7 +153,7 @@ const ExplorePage = () => {
   };
 
   return (
-    <div className="container px-4 py-8">
+    <div className="container px-4 py-8 explorer-page">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Explorer les Decks</h1>

@@ -72,8 +72,7 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
         {children}
       </div>
 
-      {/* Contrôle de zoom pour interface mobile */}
-      {isMobile && <ZoomControl />}
+      {/* Le contrôle de zoom est maintenant dans App.tsx */}
 
       {/* Indicateur flottant de mode (visible uniquement en mode forcé) */}
       {isForcedMode && typeof window !== 'undefined' && (

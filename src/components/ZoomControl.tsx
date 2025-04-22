@@ -8,8 +8,8 @@ interface ZoomSettings {
 }
 
 export const ZoomControl: React.FC = () => {
-  // Valeur de zoom par défaut à 60%
-  const [zoomValue, setZoomValue] = useState<number>(60);
+  // Valeur de zoom par défaut à 50%
+  const [zoomValue, setZoomValue] = useState<number>(50);
   const [isVisible, setIsVisible] = useState<boolean>(false);
   
   // Récupérer la valeur de zoom du localStorage au chargement
@@ -23,12 +23,12 @@ export const ZoomControl: React.FC = () => {
       } catch (e) {
         console.error("Erreur lors de la récupération du zoom", e);
         // En cas d'erreur, définir et appliquer le zoom par défaut
-        setZoomValue(60);
-        applyZoom(60);
+        setZoomValue(50);
+        applyZoom(50);
       }
     } else {
       // Aucune valeur enregistrée, appliquer le zoom par défaut
-      applyZoom(60);
+      applyZoom(50);
     }
     
     // Ajouter la classe pour le mode responsive avec zoom
