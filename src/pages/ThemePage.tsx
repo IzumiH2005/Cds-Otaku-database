@@ -303,88 +303,85 @@ const ThemePage = () => {
   }
 
   return (
-    <div className="container px-4 py-8">
-      <Link to={`/deck/${deckId}`} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
-        <ArrowLeft className="mr-1 h-4 w-4" />
-        Retour au deck
-      </Link>
+    <div className="w-full px-0 py-0">
+      <div className="px-2 py-2">
+        <Link to={`/deck/${deckId}`} className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="mr-1 h-3 w-3" />
+          Retour au deck
+        </Link>
+      </div>
       
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
+      <div className="bg-white flex items-center gap-4 px-3 py-3">
         {theme.coverImage ? (
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <div className="aspect-video md:aspect-square rounded-xl overflow-hidden border shadow-md transition-all duration-300 hover:shadow-lg">
-              <img
-                src={theme.coverImage}
-                alt={theme.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+          <div className="w-24 h-24 rounded-md overflow-hidden">
+            <img
+              src={theme.coverImage}
+              alt={theme.title}
+              className="w-full h-full object-cover"
+            />
           </div>
         ) : (
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <div className="aspect-video md:aspect-square rounded-xl overflow-hidden border bg-gradient-to-r from-accent/30 to-primary/30 flex items-center justify-center shadow-md transition-all duration-300 hover:shadow-lg">
-              <BookOpen className="h-16 w-16 text-primary/50" />
-            </div>
+          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-md">
+            <BookOpen className="h-8 w-8 text-gray-400" />
           </div>
         )}
         
         <div className="flex-1">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex flex-wrap items-center mb-1">
-                <span className="text-[10px] text-muted-foreground">
-                  {deck.title}
-                </span>
-                <ChevronLeft className="h-2 w-2 text-muted-foreground mx-1" />
-                <h1 className="text-lg font-bold">{theme.title}</h1>
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-2 line-clamp-1">
-                {theme.description}
-              </p>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1">
+              <h1 className="text-lg font-bold">{deck.title} · {theme.title}</h1>
             </div>
+            <p className="text-xs text-muted-foreground mb-4 line-clamp-2">
+              {theme.description}
+            </p>
           </div>
           
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex items-center gap-2">
             <Button 
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow text-[10px] h-6 px-2"
+              className="bg-black hover:bg-black/90 text-xs h-8 px-2 rounded-md"
               onClick={() => navigate(`/deck/${deckId}/theme/${themeId}/study`)}
             >
               <BookOpen className="mr-1 h-3 w-3" />
-              Étudier
+              Étudier ce thème
             </Button>
             
             {isOwner && (
               <Button 
                 variant="outline" 
                 onClick={() => setShowCardDialog(true)}
-                className="border-primary/30 hover:border-primary/60 text-[10px] h-6 px-2"
+                className="border text-xs h-8 px-2 rounded-md"
               >
                 <PlusCircle className="mr-1 h-3 w-3" />
-                Carte
+                Ajouter une carte
               </Button>
             )}
           </div>
         </div>
       </div>
       
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Cartes dans ce thème ({flashcards.length})</h2>
+      <div className="flex gap-2 px-3 py-2 bg-gray-100">
+        <button className="bg-white text-xs px-2 py-1 rounded-md font-medium">Toutes les cartes</button>
+        <button className="text-xs px-2 py-1 text-muted-foreground">Thèmes</button>
+      </div>
+      
+      <div className="px-3 pt-3">
+        <div className="flex justify-between items-center">
+          <h2 className="text-sm font-medium">Cartes dans ce thème ({flashcards.length})</h2>
           {isOwner && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setShowCardDialog(true)}
-              className="border-primary/30 hover:border-primary/60 transition-all duration-300 text-xs sm:text-sm"
+              className="h-7 rounded-full"
             >
-              <PlusCircle className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
-              Ajouter une carte
+              <PlusCircle className="h-3 w-3 mr-1" />
+              <span className="text-[10px]">Ajouter une carte</span>
             </Button>
           )}
         </div>
         
         {flashcards.length > 0 ? (
-          <div className="grid grid-cols-3 xxs:grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 gap-2 pt-3">
             {flashcards.map((card) => (
               <FlashCardItem 
                 key={card.id} 
@@ -395,16 +392,16 @@ const ThemePage = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 border rounded-lg bg-secondary/20">
-            <BookOpen className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-xl font-medium mb-2">Aucune carte</h3>
-            <p className="text-muted-foreground mb-6">
+          <div className="text-center py-6 mt-3 bg-gray-50 rounded-md">
+            <BookOpen className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+            <h3 className="text-sm font-medium mb-1">Aucune carte</h3>
+            <p className="text-xs text-muted-foreground mb-3">
               Ce thème ne contient pas encore de flashcards
             </p>
             {isOwner && (
               <Button onClick={() => setShowCardDialog(true)} 
-                     className="text-xs sm:text-sm">
-                <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+                     className="text-xs h-8 bg-black hover:bg-black/90">
+                <PlusCircle className="mr-1 h-3 w-3" />
                 Ajouter une carte
               </Button>
             )}
@@ -414,25 +411,25 @@ const ThemePage = () => {
       
       {/* Add Card Dialog */}
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Ajouter une flashcard au thème {theme.title}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base">Ajouter une flashcard au thème {theme.title}</DialogTitle>
+            <DialogDescription className="text-xs">
               Créez une nouvelle flashcard pour ce thème
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            {/* Front of the card */}
-            <div className="space-y-4 border p-4 rounded-lg">
-              <h3 className="font-medium">Recto de la carte</h3>
+          <div className="pt-2 space-y-4">
+            <div>
+              <h3 className="font-medium text-sm mb-2">Recto de la carte</h3>
               
-              <div className="space-y-2">
-                <Label htmlFor="front-text">Texte</Label>
+              <div className="space-y-1">
+                <Label htmlFor="front-text" className="text-xs font-normal">Texte</Label>
                 <Textarea
                   id="front-text"
                   placeholder="Ex: Définition, question, mot..."
-                  rows={3}
+                  rows={2}
+                  className="text-sm resize-none"
                   value={newCard.front.text}
                   onChange={(e) => setNewCard({
                     ...newCard,
@@ -441,68 +438,68 @@ const ThemePage = () => {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="front-image">Image (optionnelle)</Label>
-                <Input
-                  id="front-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(e, 'front')}
-                />
+              <div className="space-y-1 mt-3">
+                <Label htmlFor="front-image" className="text-xs font-normal">Image (optionnelle)</Label>
+                <div className="flex items-center">
+                  <Input
+                    id="front-image"
+                    type="file"
+                    accept="image/*"
+                    className="text-xs h-8"
+                    onChange={(e) => handleImageUpload(e, 'front')}
+                  />
+                </div>
                 {newCard.front.image && (
-                  <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border">
-                    <img
-                      src={newCard.front.image}
-                      alt="Front side"
-                      className="w-full h-full object-contain"
-                    />
+                  <div className="mt-2 relative">
+                    <div className="text-xs">Aucun fichier choisi</div>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full"
+                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         front: { ...newCard.front, image: undefined },
                       })}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2 w-2" />
                     </Button>
                   </div>
                 )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="front-audio">Audio (optionnel)</Label>
-                <Input
-                  id="front-audio"
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => handleAudioUpload(e, 'front')}
-                />
+              <div className="space-y-1 mt-3">
+                <Label htmlFor="front-audio" className="text-xs font-normal">Audio (optionnel)</Label>
+                <div className="flex items-center">
+                  <Input
+                    id="front-audio"
+                    type="file"
+                    accept="audio/*"
+                    className="text-xs h-8"
+                    onChange={(e) => handleAudioUpload(e, 'front')}
+                  />
+                </div>
                 {newCard.front.audio && (
                   <div className="mt-2 relative">
-                    <audio className="w-full" controls>
-                      <source src={newCard.front.audio} />
-                      Votre navigateur ne supporte pas l'élément audio.
-                    </audio>
+                    <div className="text-xs">Aucun fichier choisi</div>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute -top-2 right-2 w-6 h-6 rounded-full"
+                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         front: { ...newCard.front, audio: undefined },
                       })}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2 w-2" />
                     </Button>
                   </div>
                 )}
               </div>
               
-              <div className="flex items-center space-x-2 pt-2">
+              <div className="flex items-center space-x-2 mt-3">
                 <Checkbox 
                   id="show-front-additional-info" 
+                  className="h-3 w-3"
                   checked={showFrontAdditionalInfo}
                   onCheckedChange={(checked) => {
                     setShowFrontAdditionalInfo(checked as boolean);
@@ -510,19 +507,20 @@ const ThemePage = () => {
                 />
                 <label 
                   htmlFor="show-front-additional-info" 
-                  className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-xs cursor-pointer"
                 >
                   Ajouter des informations supplémentaires
                 </label>
               </div>
 
               {showFrontAdditionalInfo && (
-                <div className="space-y-2">
-                  <Label htmlFor="front-additional-info">Informations supplémentaires</Label>
+                <div className="space-y-1 mt-2">
+                  <Label htmlFor="front-additional-info" className="text-xs font-normal">Informations supplémentaires</Label>
                   <Textarea
                     id="front-additional-info"
                     placeholder="Notes, contexte ou détails complémentaires..."
-                    rows={3}
+                    rows={2}
+                    className="text-sm resize-none"
                     value={newCard.front.additionalInfo}
                     onChange={(e) => setNewCard({
                       ...newCard,
@@ -533,16 +531,16 @@ const ThemePage = () => {
               )}
             </div>
             
-            {/* Back of the card */}
-            <div className="space-y-4 border p-4 rounded-lg">
-              <h3 className="font-medium">Verso de la carte</h3>
+            <div className="pt-2">
+              <h3 className="font-medium text-sm mb-2">Verso de la carte</h3>
               
-              <div className="space-y-2">
-                <Label htmlFor="back-text">Texte</Label>
+              <div className="space-y-1">
+                <Label htmlFor="back-text" className="text-xs font-normal">Texte</Label>
                 <Textarea
                   id="back-text"
                   placeholder="Ex: Réponse, traduction..."
-                  rows={3}
+                  rows={2}
+                  className="text-sm resize-none"
                   value={newCard.back.text}
                   onChange={(e) => setNewCard({
                     ...newCard,
@@ -551,68 +549,68 @@ const ThemePage = () => {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="back-image">Image (optionnelle)</Label>
-                <Input
-                  id="back-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(e, 'back')}
-                />
+              <div className="space-y-1 mt-3">
+                <Label htmlFor="back-image" className="text-xs font-normal">Image (optionnelle)</Label>
+                <div className="flex items-center">
+                  <Input
+                    id="back-image"
+                    type="file"
+                    accept="image/*"
+                    className="text-xs h-8"
+                    onChange={(e) => handleImageUpload(e, 'back')}
+                  />
+                </div>
                 {newCard.back.image && (
-                  <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border">
-                    <img
-                      src={newCard.back.image}
-                      alt="Back side"
-                      className="w-full h-full object-contain"
-                    />
+                  <div className="mt-2 relative">
+                    <div className="text-xs">Aucun fichier choisi</div>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full"
+                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         back: { ...newCard.back, image: undefined },
                       })}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2 w-2" />
                     </Button>
                   </div>
                 )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="back-audio">Audio (optionnel)</Label>
-                <Input
-                  id="back-audio"
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => handleAudioUpload(e, 'back')}
-                />
+              <div className="space-y-1 mt-3">
+                <Label htmlFor="back-audio" className="text-xs font-normal">Audio (optionnel)</Label>
+                <div className="flex items-center">
+                  <Input
+                    id="back-audio"
+                    type="file"
+                    accept="audio/*"
+                    className="text-xs h-8"
+                    onChange={(e) => handleAudioUpload(e, 'back')}
+                  />
+                </div>
                 {newCard.back.audio && (
                   <div className="mt-2 relative">
-                    <audio className="w-full" controls>
-                      <source src={newCard.back.audio} />
-                      Votre navigateur ne supporte pas l'élément audio.
-                    </audio>
+                    <div className="text-xs">Aucun fichier choisi</div>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute -top-2 right-2 w-6 h-6 rounded-full"
+                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         back: { ...newCard.back, audio: undefined },
                       })}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2 w-2" />
                     </Button>
                   </div>
                 )}
               </div>
               
-              <div className="flex items-center space-x-2 pt-2">
+              <div className="flex items-center space-x-2 mt-3">
                 <Checkbox 
                   id="show-back-additional-info" 
+                  className="h-3 w-3"
                   checked={showBackAdditionalInfo}
                   onCheckedChange={(checked) => {
                     setShowBackAdditionalInfo(checked as boolean);
@@ -620,19 +618,20 @@ const ThemePage = () => {
                 />
                 <label 
                   htmlFor="show-back-additional-info" 
-                  className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-xs cursor-pointer"
                 >
                   Ajouter des informations supplémentaires
                 </label>
               </div>
 
               {showBackAdditionalInfo && (
-                <div className="space-y-2">
-                  <Label htmlFor="back-additional-info">Informations supplémentaires</Label>
+                <div className="space-y-1 mt-2">
+                  <Label htmlFor="back-additional-info" className="text-xs font-normal">Informations supplémentaires</Label>
                   <Textarea
                     id="back-additional-info"
                     placeholder="Notes, contexte ou détails complémentaires..."
-                    rows={3}
+                    rows={2}
+                    className="text-sm resize-none"
                     value={newCard.back.additionalInfo}
                     onChange={(e) => setNewCard({
                       ...newCard,
@@ -644,12 +643,11 @@ const ThemePage = () => {
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCardDialog(false)}>
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowCardDialog(false)} className="text-xs h-9">
               Annuler
             </Button>
-            <Button onClick={createNewCard} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary">
-              <Check className="mr-2 h-4 w-4" />
+            <Button onClick={createNewCard} className="bg-black hover:bg-black/90 text-xs h-9">
               Ajouter la carte
             </Button>
           </DialogFooter>

@@ -28,8 +28,8 @@ const DeckCard = ({
   isShared
 }: DeckCardProps) => {
   return (
-    <Card className="overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow w-full">
-      <div className="aspect-[1/1] relative">
+    <Card className="overflow-hidden flex flex-col h-full border-0 shadow-none w-full">
+      <div className="aspect-[4/5] relative">
         {coverImage ? (
           <img 
             src={coverImage} 
@@ -44,21 +44,21 @@ const DeckCard = ({
         )}
         
         {isPublic && (
-          <div className="absolute top-1 right-1 bg-primary/90 text-primary-foreground text-[8px] px-1 py-0.5 rounded-full">
+          <div className="absolute top-0 right-0 bg-black/70 text-white text-[8px] px-1.5 py-0.5">
             Public
           </div>
         )}
         
         {isShared && (
-          <div className="absolute top-1 left-1 bg-blue-500/90 text-white text-[8px] px-1 py-0.5 rounded-full">
+          <div className="absolute top-0 left-0 bg-blue-500/70 text-white text-[8px] px-1.5 py-0.5">
             Importé
           </div>
         )}
       </div>
       
-      <CardContent className="flex-grow p-1.5 sm:p-2">
-        <h3 className="text-xs sm:text-sm font-semibold mb-0.5 line-clamp-1">{title}</h3>
-        <p className="text-[9px] sm:text-[10px] text-muted-foreground mb-1 line-clamp-1">
+      <CardContent className="flex-grow p-1.5 pt-1">
+        <h3 className="text-[11px] font-semibold mb-0.5 truncate uppercase">{title}</h3>
+        <p className="text-[9px] text-muted-foreground mb-1 line-clamp-1">
           {description || "Pas de description"}
         </p>
         
@@ -85,10 +85,10 @@ const DeckCard = ({
       </CardContent>
       
       <CardFooter className="p-1.5 pt-0">
-        <Button asChild variant="default" size="sm" className="w-full text-[10px] h-6 px-2">
-          <Link to={`/deck/${id}`}>
-            Explorer
-            <ExternalLink className="ml-1 h-2.5 w-2.5" />
+        <Button asChild variant="default" className="w-full text-[10px] h-6 px-0 rounded-md bg-black hover:bg-black/90">
+          <Link to={`/deck/${id}`} className="flex justify-between items-center px-2">
+            <span>Explorer</span>
+            <ExternalLink className="h-2.5 w-2.5" />
           </Link>
         </Button>
       </CardFooter>

@@ -102,26 +102,26 @@ const MyDecksPage = () => {
   }, [decks]);
 
   return (
-    <div className="w-full px-1 py-3">
-      <div className="flex justify-between items-center mb-3">
-        <h1 className="text-xl font-bold">Mes Decks</h1>
-        <div className="flex gap-1">
-          <Button variant="outline" size="sm" onClick={refreshDecks} className="h-8 text-xs px-2">
-            <RefreshCcw className="mr-1 h-3 w-3" />
+    <div className="w-full px-0 py-0">
+      <div className="flex justify-between items-center px-4 py-3">
+        <h1 className="text-2xl font-bold">Mes Decks</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={refreshDecks} className="h-9 rounded-md flex items-center gap-1.5">
+            <RefreshCcw className="h-4 w-4" />
             Actualiser
           </Button>
-          <Button asChild size="sm" className="h-8 text-xs px-2">
-            <Link to="/create">
-              <Plus className="mr-1 h-3 w-3" />
+          <Button asChild className="bg-black hover:bg-black/90 h-9 rounded-md">
+            <Link to="/create" className="flex items-center gap-1.5">
+              <Plus className="h-4 w-4" />
               Créer un deck
             </Link>
           </Button>
         </div>
       </div>
       
-      <div className="flex justify-end items-center mb-2">
-        <div className="text-xs text-muted-foreground">
-          {decks.length} deck{decks.length !== 1 ? "s" : ""}
+      <div className="flex justify-end items-center px-4 pb-2">
+        <div className="text-sm text-muted-foreground">
+          {decks.length} decks
         </div>
       </div>
 
@@ -138,7 +138,7 @@ const MyDecksPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 xxs:gap-2 xs:gap-2 sm:gap-3 md:gap-4">
+        <div className="grid grid-cols-3 gap-0 px-1">
           {decks.map(deck => (
             <DeckCard 
               key={deck.id}
