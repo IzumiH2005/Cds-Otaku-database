@@ -492,52 +492,52 @@ const DeckPage = () => {
             ))}
           </div>
           
-          <div className="flex gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-6">
             <Button 
-              className="bg-primary hover:bg-primary/90 text-white shadow-md"
+              className="bg-primary hover:bg-primary/90 text-white shadow-md text-xs sm:text-sm"
               onClick={() => navigate(`/deck/${id}/study`)}
             >
-              <BookOpen className="mr-2 h-4 w-4" />
+              <BookOpen className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
               Étudier
             </Button>
             
-            <Button variant="outline" onClick={generateShareLink} className="border-primary/20 text-primary hover:bg-primary/10">
-              <Share2 className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={generateShareLink} className="border-primary/20 text-primary hover:bg-primary/10 text-xs sm:text-sm">
+              <Share2 className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
               Partager
             </Button>
             
             {deck?.authorId === getUser()?.id && (
               <>
-                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border-secondary/50 hover:bg-secondary/20">
-                  <FolderPlus className="mr-2 h-4 w-4" />
+                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm">
+                  <FolderPlus className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                   Ajouter un thème
                 </Button>
                 
-                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border-secondary/50 hover:bg-secondary/20">
-                  <PlusCircle className="mr-2 h-4 w-4" />
+                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm">
+                  <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                   Ajouter une carte
                 </Button>
               </>
             )}
           </div>
           
-          <div className="flex items-center text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <Avatar className="h-6 w-6 mr-2">
+          <div className="flex flex-wrap items-center text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center mr-2 mb-1 sm:mb-0">
+              <Avatar className="h-5 w-5 sm:h-6 sm:w-6 mr-1 sm:mr-2">
                 <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
                   {deck.authorId === user?.id ? user?.name.substring(0, 2).toUpperCase() : "AU"}
                 </AvatarFallback>
               </Avatar>
               <span>{deck.authorId === user?.id ? user?.name : "Autre utilisateur"}</span>
             </div>
-            <Separator orientation="vertical" className="mx-2 h-4" />
-            <div className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-1" />
+            <Separator orientation="vertical" className="mx-1 sm:mx-2 h-4 hidden sm:block" />
+            <div className="flex items-center mr-2 mb-1 sm:mb-0">
+              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               <span>{flashcards.length} cartes</span>
             </div>
-            <Separator orientation="vertical" className="mx-2 h-4" />
+            <Separator orientation="vertical" className="mx-1 sm:mx-2 h-4 hidden sm:block" />
             <div className="flex items-center">
-              <Layers className="h-4 w-4 mr-1" />
+              <Layers className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               <span>{themes.length} thèmes</span>
             </div>
           </div>
@@ -556,14 +556,15 @@ const DeckPage = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Cartes ({flashcards.length})</h2>
                 {deck?.authorId === getUser()?.id && (
-                  <Button variant="outline" size="sm" onClick={() => setShowCardDialog(true)}>
-                    <PlusIcon className="h-4 w-4 mr-1" />
+                  <Button variant="outline" size="sm" onClick={() => setShowCardDialog(true)} 
+                           className="text-xs sm:text-sm">
+                    <PlusIcon className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
                     Ajouter une carte
                   </Button>
                 )}
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 xxs:grid-cols-2 xs:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                 {flashcards.map((card) => (
                   <FlashCardItem
                     key={card.id}
@@ -582,8 +583,9 @@ const DeckPage = () => {
                 Ce deck ne contient pas encore de flashcards
               </p>
               {deck?.authorId === getUser()?.id && (
-                <Button onClick={() => setShowCardDialog(true)}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
+                <Button onClick={() => setShowCardDialog(true)}
+                        className="text-xs sm:text-sm">
+                  <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                   Ajouter une carte
                 </Button>
               )}
@@ -597,14 +599,15 @@ const DeckPage = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Thèmes ({themes.length})</h2>
                 {deck?.authorId === getUser()?.id && (
-                  <Button variant="outline" size="sm" onClick={() => setShowThemeDialog(true)}>
-                    <PlusIcon className="h-4 w-4 mr-1" />
+                  <Button variant="outline" size="sm" onClick={() => setShowThemeDialog(true)}
+                           className="text-xs sm:text-sm">
+                    <PlusIcon className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
                     Ajouter un thème
                   </Button>
                 )}
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 xxs:grid-cols-2 xs:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                 {themes.map((theme) => {
                   const themeCards = flashcards.filter(card => card.themeId === theme.id);
                   return (
@@ -631,8 +634,9 @@ const DeckPage = () => {
                 Ce deck ne contient pas encore de thèmes
               </p>
               {deck?.authorId === getUser()?.id && (
-                <Button onClick={() => setShowThemeDialog(true)}>
-                  <FolderPlus className="mr-2 h-4 w-4" />
+                <Button onClick={() => setShowThemeDialog(true)}
+                        className="text-xs sm:text-sm">
+                  <FolderPlus className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                   Ajouter un thème
                 </Button>
               )}

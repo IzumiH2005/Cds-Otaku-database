@@ -331,12 +331,12 @@ const ThemePage = () => {
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center mb-2">
-                <span className="text-sm text-muted-foreground mr-2">
+              <div className="flex flex-wrap items-center mb-2">
+                <span className="text-xs sm:text-sm text-muted-foreground mr-2">
                   {deck.title}
                 </span>
                 <ChevronLeft className="h-3 w-3 text-muted-foreground mx-1" />
-                <h1 className="text-3xl font-bold">{theme.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">{theme.title}</h1>
               </div>
               <p className="text-muted-foreground mb-6">
                 {theme.description}
@@ -344,12 +344,12 @@ const ThemePage = () => {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button 
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow transition-all duration-300 hover:shadow-md"
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow transition-all duration-300 hover:shadow-md text-xs sm:text-sm"
               onClick={() => navigate(`/deck/${deckId}/theme/${themeId}/study`)}
             >
-              <BookOpen className="mr-2 h-4 w-4" />
+              <BookOpen className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
               Étudier ce thème
             </Button>
             
@@ -357,9 +357,9 @@ const ThemePage = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setShowCardDialog(true)}
-                className="border-primary/30 hover:border-primary/60 transition-all duration-300"
+                className="border-primary/30 hover:border-primary/60 transition-all duration-300 text-xs sm:text-sm"
               >
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                 Ajouter une carte
               </Button>
             )}
@@ -375,16 +375,16 @@ const ThemePage = () => {
               variant="outline" 
               size="sm" 
               onClick={() => setShowCardDialog(true)}
-              className="border-primary/30 hover:border-primary/60 transition-all duration-300"
+              className="border-primary/30 hover:border-primary/60 transition-all duration-300 text-xs sm:text-sm"
             >
-              <PlusCircle className="h-4 w-4 mr-1" />
+              <PlusCircle className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
               Ajouter une carte
             </Button>
           )}
         </div>
         
         {flashcards.length > 0 ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 xxs:grid-cols-2 xs:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {flashcards.map((card) => (
               <FlashCardItem 
                 key={card.id} 
@@ -402,8 +402,9 @@ const ThemePage = () => {
               Ce thème ne contient pas encore de flashcards
             </p>
             {isOwner && (
-              <Button onClick={() => setShowCardDialog(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
+              <Button onClick={() => setShowCardDialog(true)} 
+                     className="text-xs sm:text-sm">
+                <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                 Ajouter une carte
               </Button>
             )}

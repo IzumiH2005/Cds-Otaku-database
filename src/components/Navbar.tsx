@@ -15,17 +15,18 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl">🎭</span>
-            <h1 className="hidden font-bold sm:inline-block">CDS FLASHCARD-BASE</h1>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-sm">
+      <div className="container flex h-14 items-center justify-between px-2 sm:px-4">
+        <div className="flex items-center gap-1">
+          <Link to="/" className="flex items-center gap-1">
+            <span className="text-xl sm:text-2xl">🎭</span>
+            <h1 className="text-sm font-bold sm:hidden">CDS</h1>
+            <h1 className="hidden text-base font-bold sm:inline-block">CDS FLASHCARD-BASE</h1>
           </Link>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4">
           <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
             Accueil
           </Link>
@@ -43,7 +44,7 @@ const Navbar = () => {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {/* Display Mode Toggle for Desktop */}
           <div className="hidden md:block">
             <DisplayModeToggle />
@@ -71,7 +72,7 @@ const Navbar = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden"
+            className="h-9 w-9 md:hidden"
             onClick={toggleMenu}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -81,50 +82,50 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="container pb-4 md:hidden">
-          <nav className="flex flex-col space-y-4">
-            <div className="flex items-center justify-between py-2 border-b mb-2 pb-3">
-              <span className="text-sm font-medium">Mode d'affichage:</span>
+        <div className="container pb-3 md:hidden px-2">
+          <nav className="flex flex-col space-y-2">
+            <div className="flex items-center justify-between py-2 border-b mb-1 pb-2">
+              <span className="text-xs font-medium">Mode d'affichage:</span>
               <DisplayModeToggle />
             </div>
             <Link 
               to="/" 
-              className={`flex items-center gap-2 px-2 py-2 rounded-md ${location.pathname === '/' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/' ? 'bg-primary/10 text-primary' : ''}`}
               onClick={toggleMenu}
             >
-              <Home className="h-5 w-5" />
+              <Home className="h-4 w-4" />
               Accueil
             </Link>
             <Link 
               to="/explore" 
-              className={`flex items-center gap-2 px-2 py-2 rounded-md ${location.pathname === '/explore' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/explore' ? 'bg-primary/10 text-primary' : ''}`}
               onClick={toggleMenu}
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4" />
               Explorer
             </Link>
             <Link 
               to="/create" 
-              className={`flex items-center gap-2 px-2 py-2 rounded-md ${location.pathname === '/create' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/create' ? 'bg-primary/10 text-primary' : ''}`}
               onClick={toggleMenu}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
               Créer
             </Link>
             <Link 
               to="/profile" 
-              className={`flex items-center gap-2 px-2 py-2 rounded-md ${location.pathname === '/profile' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/profile' ? 'bg-primary/10 text-primary' : ''}`}
               onClick={toggleMenu}
             >
-              <User className="h-5 w-5" />
+              <User className="h-4 w-4" />
               Profil
             </Link>
             <Link 
               to="/my-decks" 
-              className={`flex items-center gap-2 px-2 py-2 rounded-md ${location.pathname === '/my-decks' ? 'bg-primary/10 text-primary' : ''}`}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/my-decks' ? 'bg-primary/10 text-primary' : ''}`}
               onClick={toggleMenu}
             >
-              <Folder className="h-5 w-5" />
+              <Folder className="h-4 w-4" />
               Mes Decks
             </Link>
           </nav>

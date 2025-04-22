@@ -41,7 +41,7 @@ export function DisplayModeToggle() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -49,13 +49,13 @@ export function DisplayModeToggle() {
               variant="outline" 
               size="sm" 
               onClick={toggleMode}
-              className="flex items-center gap-2"
+              className="flex items-center gap-1 h-8 px-2 sm:px-3 text-xs sm:text-sm"
             >
               {getButtonIcon()}
               <span className="hidden md:inline-block">{getButtonLabel()}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent side="bottom" className="max-w-[200px] text-xs">
             <p>{getTooltipText()}</p>
           </TooltipContent>
         </Tooltip>
@@ -69,13 +69,13 @@ export function DisplayModeToggle() {
                 variant="ghost" 
                 size="sm" 
                 onClick={resetToAuto}
-                className="flex items-center justify-center"
+                className="flex items-center justify-center h-8 w-8 p-0"
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={14} />
                 <span className="sr-only">Revenir au mode automatique</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent side="bottom" className="text-xs">
               <p>Revenir au mode automatique</p>
             </TooltipContent>
           </Tooltip>

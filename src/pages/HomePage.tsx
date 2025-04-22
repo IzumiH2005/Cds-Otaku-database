@@ -69,7 +69,7 @@ const HomePage = () => {
       <section className="py-16">
         <div className="container px-4 mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">Fonctionnalités exceptionnelles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             <Card className="bg-gradient-to-br from-background to-secondary/50 border-primary/20">
               <CardHeader>
                 <div className="mb-2 p-3 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -131,7 +131,7 @@ const HomePage = () => {
                 </Link>
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {recentDecks.map((deck) => (
                 <DeckCard
                   key={deck.id}

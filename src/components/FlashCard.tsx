@@ -197,8 +197,14 @@ const FlashCard = ({
         {`
         .flashcard {
           transition: transform 0.3s;
-          aspect-ratio: 0.6;
-          min-height: 200px;
+          aspect-ratio: 0.65; /* Aspect ratio légèrement ajusté */
+          min-height: 180px; /* Hauteur minimale réduite pour mobile */
+        }
+        
+        @media (max-width: 640px) {
+          .flashcard {
+            min-height: 160px; /* Encore plus petit sur très petits écrans */
+          }
         }
         
         .perspective-1000 {
@@ -225,6 +231,15 @@ const FlashCard = ({
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
           transition: all 0.3s ease;
+          padding: min(3%, 0.75rem); /* Padding adaptatif */
+          font-size: 0.9rem; /* Police légèrement réduite */
+        }
+        
+        @media (max-width: 640px) {
+          .flashcard-front,
+          .flashcard-back {
+            font-size: 0.85rem; /* Police encore plus réduite sur petits écrans */
+          }
         }
         
         .flashcard-back {

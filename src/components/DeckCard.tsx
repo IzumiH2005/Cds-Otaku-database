@@ -35,29 +35,30 @@ const DeckCard = ({
             src={coverImage} 
             alt={title} 
             className="w-full h-full object-cover"
+            loading="lazy" // Optimisation pour mobile
           />
         ) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <span className="text-3xl">📚</span>
+            <span className="text-2xl">📚</span>
           </div>
         )}
         
         {isPublic && (
-          <div className="absolute top-1 right-1 bg-primary/90 text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+          <div className="absolute top-1 right-1 bg-primary/90 text-primary-foreground text-[9px] px-1.5 py-0.5 rounded-full">
             Public
           </div>
         )}
         
         {isShared && (
-          <div className="absolute top-1 left-1 bg-blue-500/90 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+          <div className="absolute top-1 left-1 bg-blue-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-full">
             Importé
           </div>
         )}
       </div>
       
-      <CardContent className="flex-grow p-3">
-        <h3 className="text-base font-semibold mb-0.5 line-clamp-1">{title}</h3>
-        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+      <CardContent className="flex-grow p-2 sm:p-3">
+        <h3 className="text-sm sm:text-base font-semibold mb-0.5 line-clamp-1">{title}</h3>
+        <p className="text-xs text-muted-foreground mb-1 sm:mb-2 line-clamp-2">
           {description || "Pas de description"}
         </p>
         
