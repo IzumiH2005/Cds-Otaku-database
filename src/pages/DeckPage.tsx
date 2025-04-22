@@ -12,7 +12,8 @@ import {
   Pencil,
   ArrowLeft,
   PlusIcon,
-  Check
+  Check,
+  X
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,8 @@ const DeckPage = () => {
   });
   
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [showFrontAdditionalInfo, setShowFrontAdditionalInfo] = useState(false);
+  const [showBackAdditionalInfo, setShowBackAdditionalInfo] = useState(false);
   
   useEffect(() => {
     if (!id) return;
@@ -304,6 +307,10 @@ const DeckPage = () => {
       return;
     }
     
+    // Réinitialiser les états d'informations supplémentaires
+    setShowFrontAdditionalInfo(false);
+    setShowBackAdditionalInfo(false);
+    
     try {
       const card = createFlashcard({
         deckId: id,
@@ -469,53 +476,53 @@ const DeckPage = () => {
         )}
         
         <div className="flex-1">
-          <div className="flex items-start justify-between">
-            <h1 className="text-3xl font-bold mb-2">{deck?.title}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl sm:text-2xl font-bold">{deck?.title}</h1>
             {deck?.authorId === getUser()?.id && (
-              <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary/80 hover:bg-primary/10">
+              <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary/80 hover:bg-primary/10 h-8 w-8">
                 <Link to={`/deck/${id}/edit`}>
-                  <Edit className="h-5 w-5" />
+                  <Edit className="h-4 w-4" />
                 </Link>
               </Button>
             )}
           </div>
           
-          <p className="text-muted-foreground mb-4">
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
             {deck.description}
           </p>
           
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-1 mb-2">
             {deck.tags.map((tag: string) => (
-              <Badge key={tag} variant="secondary" className="text-xs bg-secondary/50">
+              <Badge key={tag} variant="secondary" className="text-[10px] bg-secondary/50 py-0 h-5">
                 {tag}
               </Badge>
             ))}
           </div>
           
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-1 mb-3">
             <Button 
-              className="bg-primary hover:bg-primary/90 text-white shadow-md text-xs sm:text-sm"
+              className="bg-primary hover:bg-primary/90 text-white text-xs h-7 px-2"
               onClick={() => navigate(`/deck/${id}/study`)}
             >
-              <BookOpen className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+              <BookOpen className="mr-1 h-3 w-3" />
               Étudier
             </Button>
             
-            <Button variant="outline" onClick={generateShareLink} className="border-primary/20 text-primary hover:bg-primary/10 text-xs sm:text-sm">
-              <Share2 className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+            <Button variant="outline" onClick={generateShareLink} className="border-primary/20 text-primary hover:bg-primary/10 text-xs h-7 px-2">
+              <Share2 className="mr-1 h-3 w-3" />
               Partager
             </Button>
             
             {deck?.authorId === getUser()?.id && (
               <>
-                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm">
-                  <FolderPlus className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-                  Ajouter un thème
+                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs h-7 px-2">
+                  <FolderPlus className="mr-1 h-3 w-3" />
+                  Thème
                 </Button>
                 
-                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm">
-                  <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-                  Ajouter une carte
+                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs h-7 px-2">
+                  <PlusCircle className="mr-1 h-3 w-3" />
+                  Carte
                 </Button>
               </>
             )}
@@ -709,21 +716,21 @@ const DeckPage = () => {
       </Dialog>
       
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Ajouter une flashcard</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-1">
+            <DialogTitle className="text-base">Ajouter une flashcard</DialogTitle>
+            <DialogDescription className="text-xs">
               Créez une nouvelle flashcard pour votre deck
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-2">
             {themes.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="card-theme">Thème (optionnel)</Label>
+              <div className="space-y-1">
+                <Label htmlFor="card-theme" className="text-xs">Thème (optionnel)</Label>
                 <select
                   id="card-theme"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                   value={newCard.themeId}
                   onChange={(e) => setNewCard({ ...newCard, themeId: e.target.value || undefined })}
                 >
@@ -737,122 +744,181 @@ const DeckPage = () => {
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4 border p-4 rounded-lg">
-                <h3 className="font-medium">Recto de la carte</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="front-text">Texte</Label>
-                  <Textarea
-                    id="front-text"
-                    placeholder="Ex: Définition, question, mot..."
-                    rows={3}
-                    value={newCard.front.text}
-                    onChange={(e) => setNewCard({
-                      ...newCard,
-                      front: { ...newCard.front, text: e.target.value },
-                    })}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="front-image">Image (optionnelle)</Label>
-                  <Input
-                    id="front-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'front')}
-                  />
-                  {newCard.front.image && (
-                    <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border">
-                      <img
-                        src={newCard.front.image}
-                        alt="Front side"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="front-audio">Audio (optionnel)</Label>
-                  <Input
-                    id="front-audio"
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => handleAudioUpload(e, 'front')}
-                  />
-                  {newCard.front.audio && (
-                    <audio className="w-full mt-2" controls>
-                      <source src={newCard.front.audio} />
-                      Votre navigateur ne supporte pas l'élément audio.
-                    </audio>
-                  )}
-                </div>
-              </div>
+            <Tabs defaultValue="front" className="w-full">
+              <TabsList className="w-full h-8 mb-2 bg-secondary/20">
+                <TabsTrigger value="front" className="text-xs h-7">Recto de la carte</TabsTrigger>
+                <TabsTrigger value="back" className="text-xs h-7">Verso de la carte</TabsTrigger>
+              </TabsList>
               
-              <div className="space-y-4 border p-4 rounded-lg">
-                <h3 className="font-medium">Verso de la carte</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="back-text">Texte</Label>
-                  <Textarea
-                    id="back-text"
-                    placeholder="Ex: Réponse, traduction..."
-                    rows={3}
-                    value={newCard.back.text}
-                    onChange={(e) => setNewCard({
-                      ...newCard,
-                      back: { ...newCard.back, text: e.target.value },
-                    })}
-                  />
+              <TabsContent value="front" className="mt-0 space-y-3">
+                <div className="space-y-2 border p-3 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="front-text" className="text-xs">Texte</Label>
+                    <Textarea
+                      id="front-text"
+                      placeholder="Ex: Définition, question, mot..."
+                      rows={2}
+                      className="text-xs p-2 min-h-[60px] resize-y"
+                      value={newCard.front.text}
+                      onChange={(e) => setNewCard({
+                        ...newCard,
+                        front: { ...newCard.front, text: e.target.value },
+                      })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="front-image" className="text-xs">Image (optionnelle)</Label>
+                    <Input
+                      id="front-image"
+                      type="file"
+                      accept="image/*"
+                      className="text-xs h-8"
+                      onChange={(e) => handleImageUpload(e, 'front')}
+                    />
+                    {newCard.front.image && (
+                      <div className="mt-1 relative w-full h-24 rounded-md overflow-hidden border">
+                        <img
+                          src={newCard.front.image}
+                          alt="Front side"
+                          className="w-full h-full object-contain"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full"
+                          onClick={() => setNewCard({
+                            ...newCard,
+                            front: { ...newCard.front, image: undefined },
+                          })}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="front-audio" className="text-xs">Audio (optionnel)</Label>
+                    <Input
+                      id="front-audio"
+                      type="file"
+                      accept="audio/*"
+                      className="text-xs h-8"
+                      onChange={(e) => handleAudioUpload(e, 'front')}
+                    />
+                    {newCard.front.audio && (
+                      <div className="mt-1 relative">
+                        <audio className="w-full h-8" controls>
+                          <source src={newCard.front.audio} />
+                          Votre navigateur ne supporte pas l'élément audio.
+                        </audio>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-1 right-1 w-5 h-5 rounded-full"
+                          onClick={() => setNewCard({
+                            ...newCard,
+                            front: { ...newCard.front, audio: undefined },
+                          })}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="back-image">Image (optionnelle)</Label>
-                  <Input
-                    id="back-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'back')}
-                  />
-                  {newCard.back.image && (
-                    <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border">
-                      <img
-                        src={newCard.back.image}
-                        alt="Back side"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
+              </TabsContent>
+              
+              <TabsContent value="back" className="mt-0 space-y-3">
+                <div className="space-y-2 border p-3 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="back-text" className="text-xs">Texte</Label>
+                    <Textarea
+                      id="back-text"
+                      placeholder="Ex: Réponse, traduction..."
+                      rows={2}
+                      className="text-xs p-2 min-h-[60px] resize-y"
+                      value={newCard.back.text}
+                      onChange={(e) => setNewCard({
+                        ...newCard,
+                        back: { ...newCard.back, text: e.target.value },
+                      })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="back-image" className="text-xs">Image (optionnelle)</Label>
+                    <Input
+                      id="back-image"
+                      type="file"
+                      accept="image/*"
+                      className="text-xs h-8"
+                      onChange={(e) => handleImageUpload(e, 'back')}
+                    />
+                    {newCard.back.image && (
+                      <div className="mt-1 relative w-full h-24 rounded-md overflow-hidden border">
+                        <img
+                          src={newCard.back.image}
+                          alt="Back side"
+                          className="w-full h-full object-contain"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full"
+                          onClick={() => setNewCard({
+                            ...newCard,
+                            back: { ...newCard.back, image: undefined },
+                          })}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="back-audio" className="text-xs">Audio (optionnel)</Label>
+                    <Input
+                      id="back-audio"
+                      type="file"
+                      accept="audio/*"
+                      className="text-xs h-8"
+                      onChange={(e) => handleAudioUpload(e, 'back')}
+                    />
+                    {newCard.back.audio && (
+                      <div className="mt-1 relative">
+                        <audio className="w-full h-8" controls>
+                          <source src={newCard.back.audio} />
+                          Votre navigateur ne supporte pas l'élément audio.
+                        </audio>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-1 right-1 w-5 h-5 rounded-full"
+                          onClick={() => setNewCard({
+                            ...newCard,
+                            back: { ...newCard.back, audio: undefined },
+                          })}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="back-audio">Audio (optionnel)</Label>
-                  <Input
-                    id="back-audio"
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => handleAudioUpload(e, 'back')}
-                  />
-                  {newCard.back.audio && (
-                    <audio className="w-full mt-2" controls>
-                      <source src={newCard.back.audio} />
-                      Votre navigateur ne supporte pas l'élément audio.
-                    </audio>
-                  )}
-                </div>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCardDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCardDialog(false)} className="h-8 text-xs">
               Annuler
             </Button>
-            <Button onClick={createNewCard}>
-              <Check className="mr-2 h-4 w-4" />
-              Ajouter la carte
+            <Button onClick={createNewCard} className="h-8 text-xs">
+              <Check className="mr-1 h-3 w-3" />
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>

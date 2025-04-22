@@ -331,36 +331,36 @@ const ThemePage = () => {
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex flex-wrap items-center mb-2">
-                <span className="text-xs sm:text-sm text-muted-foreground mr-2">
+              <div className="flex flex-wrap items-center mb-1">
+                <span className="text-[10px] text-muted-foreground">
                   {deck.title}
                 </span>
-                <ChevronLeft className="h-3 w-3 text-muted-foreground mx-1" />
-                <h1 className="text-2xl sm:text-3xl font-bold">{theme.title}</h1>
+                <ChevronLeft className="h-2 w-2 text-muted-foreground mx-1" />
+                <h1 className="text-lg font-bold">{theme.title}</h1>
               </div>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-[10px] text-muted-foreground mb-2 line-clamp-1">
                 {theme.description}
               </p>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1 mb-2">
             <Button 
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow transition-all duration-300 hover:shadow-md text-xs sm:text-sm"
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow text-[10px] h-6 px-2"
               onClick={() => navigate(`/deck/${deckId}/theme/${themeId}/study`)}
             >
-              <BookOpen className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-              Étudier ce thème
+              <BookOpen className="mr-1 h-3 w-3" />
+              Étudier
             </Button>
             
             {isOwner && (
               <Button 
                 variant="outline" 
                 onClick={() => setShowCardDialog(true)}
-                className="border-primary/30 hover:border-primary/60 transition-all duration-300 text-xs sm:text-sm"
+                className="border-primary/30 hover:border-primary/60 text-[10px] h-6 px-2"
               >
-                <PlusCircle className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
-                Ajouter une carte
+                <PlusCircle className="mr-1 h-3 w-3" />
+                Carte
               </Button>
             )}
           </div>
