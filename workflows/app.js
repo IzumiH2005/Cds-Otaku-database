@@ -1,6 +1,6 @@
 module.exports = {
-  name: "app",
-  description: "Starts the application",
+  name: "Start Application",
+  description: "Starts the flashcard application",
   run: "npm run dev",
   language: "nodejs"
 };

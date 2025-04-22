@@ -97,88 +97,53 @@ const ThemeCard = ({
 
   return (
     <>
-      <Card className="h-full overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
-        {coverImage ? (
-          <div className="relative aspect-[1.2/1] w-full overflow-hidden">
-            <img
-              src={coverImage}
-              alt={title}
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className="absolute bottom-1 left-1 text-white">
-              <span className="text-[10px] font-medium">{cardCount} cartes</span>
+      <Card className="h-full overflow-hidden shadow-none transition-shadow group rounded-lg">
+        <Link to={`/deck/${deckId}/theme/${id}`} className="flex flex-col h-full">
+          {coverImage ? (
+            <div className="relative aspect-[1.8/1] w-full overflow-hidden rounded-t-lg">
+              <img
+                src={coverImage}
+                alt={title}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute bottom-1 left-2 text-white">
+                <span className="text-[10px] font-medium">{cardCount} cartes</span>
+              </div>
             </div>
-            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-6 w-6 bg-white/80 hover:bg-white"
+          ) : (
+            <div className="aspect-[1.8/1] w-full bg-gray-100 flex items-center justify-center relative rounded-t-lg">
+              <Layers className="h-8 w-8 text-gray-400" />
+              <div className="absolute bottom-1 left-2 text-gray-600">
+                <span className="text-[10px] font-medium">{cardCount} cartes</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="p-2 flex-grow flex flex-col">
+            <div className="flex-grow">
+              <h3 className="text-sm font-medium mb-1 line-clamp-1">{title}</h3>
+              <p className="text-[10px] text-muted-foreground line-clamp-1 mb-2">
+                {description}
+              </p>
+            </div>
+            
+            <div className="flex justify-between items-center mt-auto">
+              <span className="text-xs text-black font-medium">Explorer</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 p-0"
                 onClick={(e) => {
+                  e.stopPropagation();
                   e.preventDefault();
                   setShowEditDialog(true);
                 }}
               >
                 <Edit className="h-3 w-3" />
               </Button>
-              <Button
-                variant="destructive"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowDeleteDialog(true);
-                }}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
             </div>
           </div>
-        ) : (
-          <div className="aspect-[1.2/1] w-full bg-gradient-to-r from-accent/30 to-primary/30 flex items-center justify-center relative">
-            <Layers className="h-10 w-10 text-primary/50" />
-            <div className="absolute bottom-1 left-1 text-white/90">
-              <span className="text-[10px] font-medium">{cardCount} cartes</span>
-            </div>
-            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-6 w-6 bg-white/80 hover:bg-white"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowEditDialog(true);
-                }}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="destructive"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowDeleteDialog(true);
-                }}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        )}
-        <Link to={`/deck/${deckId}/theme/${id}`}>
-          <CardHeader className="p-3">
-            <CardTitle className="line-clamp-1 text-base font-semibold">{title}</CardTitle>
-            <CardDescription className="line-clamp-2 text-[10px]">
-              {description}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex justify-between p-2 pt-0">
-            <div className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80">
-              <span>Explorer</span>
-              <ArrowRight className="h-3 w-3" />
-            </div>
-          </CardFooter>
         </Link>
       </Card>
 

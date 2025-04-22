@@ -427,100 +427,68 @@ const DeckPage = () => {
   }
   
   return (
-    <div className="container px-4 py-8">
-      <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
-        <ArrowLeft className="mr-1 h-4 w-4" />
-        Retour
-      </Link>
+    <div className="w-full px-0 py-0">
+      <div className="px-2 py-2">
+        <Link to="/" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="mr-1 h-3 w-3" />
+          Retour
+        </Link>
+      </div>
       
-      <div className="flex flex-col md:flex-row gap-6 mb-8">
+      <div className="bg-white flex items-center gap-4 px-3 py-3">
         {deck.coverImage ? (
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <div className="relative aspect-video md:aspect-square rounded-xl overflow-hidden border shadow-lg">
-              <img
-                src={deck.coverImage}
-                alt={deck.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                {deck.isPublic ? (
-                  <Badge variant="default" className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300">
-                    Public
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-slate-500/20 text-slate-700 dark:bg-slate-500/30 dark:text-slate-300">
-                    Privé
-                  </Badge>
-                )}
-              </div>
-            </div>
+          <div className="w-24 h-24 rounded-md overflow-hidden">
+            <img
+              src={deck.coverImage}
+              alt={deck.title}
+              className="w-full h-full object-cover"
+            />
           </div>
         ) : (
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <div className="relative aspect-video md:aspect-square rounded-xl overflow-hidden border bg-gradient-to-r from-primary/30 to-accent/30 flex items-center justify-center shadow-lg">
-              <BookOpen className="h-16 w-16 text-primary/50" />
-              <div className="absolute bottom-4 left-4">
-                {deck.isPublic ? (
-                  <Badge variant="default" className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300">
-                    Public
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="bg-slate-500/20 text-slate-700 dark:bg-slate-500/30 dark:text-slate-300">
-                    Privé
-                  </Badge>
-                )}
-              </div>
-            </div>
+          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-md">
+            <BookOpen className="h-8 w-8 text-gray-400" />
           </div>
         )}
         
         <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-bold">{deck?.title}</h1>
-            {deck?.authorId === getUser()?.id && (
-              <Button variant="ghost" size="icon" asChild className="text-primary hover:text-primary/80 hover:bg-primary/10 h-8 w-8">
-                <Link to={`/deck/${id}/edit`}>
-                  <Edit className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1">
+              <h1 className="text-lg font-bold">{deck?.title}</h1>
+              {deck?.authorId === getUser()?.id && (
+                <Button variant="ghost" size="icon" asChild className="h-5 w-5 p-0">
+                  <Link to={`/deck/${id}/edit`}>
+                    <Edit className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mb-4 line-clamp-2">
+              {deck.description}
+            </p>
           </div>
           
-          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
-            {deck.description}
-          </p>
-          
-          <div className="flex flex-wrap gap-1 mb-2">
-            {deck.tags.map((tag: string) => (
-              <Badge key={tag} variant="secondary" className="text-[10px] bg-secondary/50 py-0 h-5">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          
-          <div className="flex flex-wrap gap-1 mb-3">
+          <div className="flex items-center gap-2">
             <Button 
-              className="bg-primary hover:bg-primary/90 text-white text-xs h-7 px-2"
+              className="bg-black hover:bg-black/90 text-xs h-8 px-2 rounded-md"
               onClick={() => navigate(`/deck/${id}/study`)}
             >
               <BookOpen className="mr-1 h-3 w-3" />
               Étudier
             </Button>
             
-            <Button variant="outline" onClick={generateShareLink} className="border-primary/20 text-primary hover:bg-primary/10 text-xs h-7 px-2">
+            <Button variant="outline" onClick={generateShareLink} className="border text-xs h-8 px-2 rounded-md">
               <Share2 className="mr-1 h-3 w-3" />
               Partager
             </Button>
             
             {deck?.authorId === getUser()?.id && (
               <>
-                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs h-7 px-2">
+                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border text-xs h-8 px-2 rounded-md">
                   <FolderPlus className="mr-1 h-3 w-3" />
                   Thème
                 </Button>
                 
-                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border-secondary/50 hover:bg-secondary/20 text-xs h-7 px-2">
+                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border text-xs h-8 px-2 rounded-md">
                   <PlusCircle className="mr-1 h-3 w-3" />
                   Carte
                 </Button>
@@ -571,7 +539,7 @@ const DeckPage = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-3 xxs:grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 xxs:grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {flashcards.map((card) => (
                   <FlashCardItem
                     key={card.id}
@@ -614,7 +582,7 @@ const DeckPage = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-3 xxs:grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 xxs:grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {themes.map((theme) => {
                   const themeCards = flashcards.filter(card => card.themeId === theme.id);
                   return (
@@ -716,7 +684,7 @@ const DeckPage = () => {
       </Dialog>
       
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto flashcard-form dialog-content-mobile">
           <DialogHeader className="pb-1">
             <DialogTitle className="text-base">Ajouter une flashcard</DialogTitle>
             <DialogDescription className="text-xs">

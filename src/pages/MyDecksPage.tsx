@@ -138,7 +138,7 @@ const MyDecksPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-0 px-1">
+        <div className="grid grid-cols-3 gap-3 px-2">
           {decks.map(deck => (
             <DeckCard 
               key={deck.id}
