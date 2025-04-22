@@ -13,6 +13,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { LayoutContainer } from "@/components/LayoutContainer";
 import ZoomControl from "@/components/ZoomControl";
+import AppWebViewProvider from "@/components/AppWebViewProvider";
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -81,8 +82,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <HashRouter>
-          <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20">
-            <ZoomControl />
+          <AppWebViewProvider>
+            <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20">
+              <ZoomControl />
             <Routes>
               {/* Public routes without Navbar/Footer */}
               <Route path="/login" element={<LoginPage />} />
@@ -273,6 +275,7 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
+          </AppWebViewProvider>
         </HashRouter>
       </TooltipProvider>
     </QueryClientProvider>
