@@ -87,7 +87,7 @@ const FlashCard = ({
       <div className="flashcard-inner w-full h-full relative shadow-sm">
         <div 
           ref={frontRef}
-          className="flashcard-front bg-purple-100 dark:bg-purple-900/30 rounded-md p-3 flex flex-col items-center justify-center text-center border border-purple-200 dark:border-purple-800/60"
+          className="flashcard-front rounded-md p-3 flex flex-col items-center justify-center text-center"
         >
           {front.image && (
             <div className="w-full aspect-[4/3] overflow-hidden rounded-md mb-2">
@@ -140,7 +140,7 @@ const FlashCard = ({
         
         <div 
           ref={backRef}
-          className="flashcard-back bg-purple-100 dark:bg-purple-900/30 rounded-md p-3 flex flex-col items-center justify-center text-center border border-purple-200 dark:border-purple-800/60"
+          className="flashcard-back rounded-md p-3 flex flex-col items-center justify-center text-center"
         >
           {back.image && (
             <div className="w-full aspect-[4/3] overflow-hidden rounded-md mb-2">
@@ -197,13 +197,13 @@ const FlashCard = ({
         {`
         .flashcard {
           transition: transform 0.3s;
-          aspect-ratio: 0.65; /* Aspect ratio légèrement ajusté */
-          min-height: 180px; /* Hauteur minimale réduite pour mobile */
+          aspect-ratio: 0.65;
+          min-height: 180px;
         }
         
         @media (max-width: 640px) {
           .flashcard {
-            min-height: 160px; /* Encore plus petit sur très petits écrans */
+            min-height: 160px;
           }
         }
         
@@ -217,6 +217,7 @@ const FlashCard = ({
           height: 100%;
           transition: transform 0.6s;
           transform-style: preserve-3d;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
         
         .flashcard.flipped .flashcard-inner {
@@ -231,19 +232,64 @@ const FlashCard = ({
           -webkit-backface-visibility: hidden;
           backface-visibility: hidden;
           transition: all 0.3s ease;
-          padding: min(3%, 0.75rem); /* Padding adaptatif */
-          font-size: 0.9rem; /* Police légèrement réduite */
+          padding: min(3%, 0.75rem);
+          font-size: clamp(0.8rem, 3vw, 1rem);
+          overflow: hidden;
+          border-radius: 12px;
+          box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
-        @media (max-width: 640px) {
-          .flashcard-front,
-          .flashcard-back {
-            font-size: 0.85rem; /* Police encore plus réduite sur petits écrans */
-          }
+        .flashcard-front {
+          background: linear-gradient(140deg, #e0b2ff 0%, #af8cff 100%);
+          border: 1px solid rgba(175, 140, 255, 0.5);
         }
         
         .flashcard-back {
           transform: rotateY(180deg);
+          background: linear-gradient(140deg, #d2c1ff 0%, #9d7fff 100%);
+          border: 1px solid rgba(157, 127, 255, 0.5);
+        }
+        
+        .flashcard-inner:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .flashcard.flipped .flashcard-inner:hover {
+          transform: translateY(-5px) rotateY(180deg);
+        }
+        
+        /* Gestion du texte */
+        .flashcard-front div,
+        .flashcard-back div {
+          max-height: 100%;
+          overflow-y: auto;
+          word-break: break-word;
+        }
+        
+        /* Barres de défilement plus discrètes */
+        .flashcard-front div::-webkit-scrollbar,
+        .flashcard-back div::-webkit-scrollbar {
+          width: 4px;
+        }
+        
+        .flashcard-front div::-webkit-scrollbar-thumb,
+        .flashcard-back div::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+        }
+        
+        .flashcard-front div::-webkit-scrollbar-track,
+        .flashcard-back div::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Taille de texte adaptative */
+        @media (max-width: 640px) {
+          .flashcard-front,
+          .flashcard-back {
+            font-size: clamp(0.75rem, 2.5vw, 0.85rem);
+          }
         }
         `}
       </style>

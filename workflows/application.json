@@ -1,0 +1,15 @@
+{
+  "name": "Application",
+  "command": "npm run dev",
+  "restartOn": {
+    "files": [
+      "src/**",
+      "tailwind.config.ts",
+      "index.html"
+    ],
+    "manual": true
+  },
+  "env": {
+    "PORT": "3000"
+  }
+}
