@@ -144,6 +144,139 @@
   @apply text-primary font-semibold;
 }
 
+/* Système de zoom intégré à l'application */
+/* Container principal avec zoom */
+.app-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1 0 auto;
+  width: 100%;
+  transform-origin: top center;
+  transition: transform 0.2s ease-out;
+}
+
+/* Contrôles de zoom */
+.zoom-control-container {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: auto;
+  min-width: 120px;
+}
+
+.zoom-toggle-button {
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  padding: 5px 15px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 70px;
+  text-align: center;
+}
+
+.zoom-control-panel {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.zoom-slider-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 10px;
+}
+
+.zoom-slider {
+  flex: 1;
+  height: 4px;
+  margin: 0 10px;
+  width: 180px;
+}
+
+.zoom-minus, .zoom-plus {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 20px;
+  text-align: center;
+}
+
+.zoom-reset-button {
+  background: transparent;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Adaptabilité avec le zoom */
+.zoom-responsive {
+  overflow-x: hidden;
+}
+
+/* Niveaux de zoom différents */
+body.zoom-level-30 .app-content,
+body.zoom-level-40 .app-content,
+body.zoom-level-50 .app-content {
+  width: 150%; /* Élargissement pour compenser le petite échelle */
+  left: -25%;
+  position: relative;
+}
+
+body.zoom-level-60 .app-content,
+body.zoom-level-70 .app-content {
+  width: 130%;
+  left: -15%;
+  position: relative;
+}
+
+/* Pied de page toujours en bas */
+.app-footer {
+  flex-shrink: 0;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  margin-top: auto;
+}
+
+/* Correction pour le défilement sur toute la page */
+html, body {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain; /* Empêche le rebond sur iOS */
+  -webkit-overflow-scrolling: touch; /* Défilement fluide sur iOS */
+}
+
 /* Amélioration du zoom et du formulaire de flashcards */
 .flashcard-form {
   touch-action: manipulation pinch-zoom !important;

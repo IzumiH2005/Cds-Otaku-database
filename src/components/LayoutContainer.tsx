@@ -1,6 +1,7 @@
 import { useDisplayMode } from "@/hooks/use-mobile";
-import React from "react";
+import React, { useEffect } from "react";
 import { Smartphone, Monitor, RefreshCw } from "lucide-react";
+import ZoomControl from "./ZoomControl";
 
 interface LayoutContainerProps {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
 
   // Classes CSS à appliquer en fonction du mode d'affichage
   const containerClasses = [
-    'bg-background min-h-screen mode-transition',
+    'bg-background min-h-screen mode-transition app-container',
     // Mode mobile: toujours appliquer une largeur limitée (avec ou sans mode forcé)
     isMobile ? 'mobile-mode-container mobile-view-adjustments' : '',
     // En mode desktop: appliquer aussi une largeur contrôlée mais plus large que mobile
@@ -30,6 +31,30 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
     isForcedMode ? 'forced-mode-border' : '',
     className
   ].filter(Boolean).join(' ');
+
+  // Synchroniser les changements de taille d'écran, les orientations, etc.
+  useEffect(() => {
+    const handleResize = () => {
+      // Forcer un recalcul des dimensions pour l'adaptation du zoom
+      const appContent = document.querySelector('.app-content');
+      if (appContent) {
+        const currentZoom = parseFloat(localStorage.getItem('app_zoom_level') || '100') / 100;
+        const height = window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${height}px`);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    // Définir la hauteur initiale
+    handleResize();
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
 
   return (
     <div className={containerClasses}>
@@ -43,7 +68,12 @@ export function LayoutContainer({ children, className = "" }: LayoutContainerPro
         </div>
       )}
 
-      {children}
+      <div className="app-content">
+        {children}
+      </div>
+
+      {/* Contrôle de zoom pour interface mobile */}
+      {isMobile && <ZoomControl />}
 
       {/* Indicateur flottant de mode (visible uniquement en mode forcé) */}
       {isForcedMode && typeof window !== 'undefined' && (
