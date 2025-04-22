@@ -98,147 +98,87 @@ const DeckPage = () => {
     }
     
     setDeck(deckData);
-    const currentUser = getUser();
-    setUser(currentUser);
-    setIsOwner(deckData.authorId === currentUser?.id);
-    
-    const deckThemes = getThemesByDeck(id);
-    setThemes(deckThemes);
-    
-    const deckCards = getFlashcardsByDeck(id);
-    setFlashcards(deckCards);
-    
+    setIsOwner(deckData.authorId === user?.id);
+    loadDeckData();
     setIsLoading(false);
+  }, [id]);
+  
+  const loadDeckData = () => {
+    if (!id) return;
     
-    const checkOwnershipInterval = setInterval(() => {
-      const freshUser = getUser();
-      if (freshUser?.id !== user?.id) {
-        setUser(freshUser);
-        setIsOwner(deckData.authorId === freshUser?.id);
-      }
-    }, 3000);
+    const themesList = getThemesByDeck(id);
+    const cardsList = getFlashcardsByDeck(id);
     
-    return () => {
-      clearInterval(checkOwnershipInterval);
-    };
-  }, [id, navigate, toast]);
+    setThemes(themesList);
+    setFlashcards(cardsList);
+  };
+  
+  const refreshFlashcards = () => {
+    if (!id) return;
+    setFlashcards(getFlashcardsByDeck(id));
+  };
   
   const refreshThemes = () => {
     if (!id) return;
-    const deckThemes = getThemesByDeck(id);
-    setThemes(deckThemes);
-  };
-
-  const refreshFlashcards = () => {
-    if (!id) return;
-    const deckCards = getFlashcardsByDeck(id);
-    setFlashcards(deckCards);
+    setThemes(getThemesByDeck(id));
   };
   
-  const handleThemeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back' | 'theme') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     try {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "L'image ne doit pas dépasser 5 Mo",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const base64 = await getBase64(file);
-      setNewTheme({ ...newTheme, coverImage: base64 });
+      
+      if (type === 'front') {
+        setNewCard({
+          ...newCard,
+          front: { ...newCard.front, image: base64 as string },
+        });
+      } else if (type === 'back') {
+        setNewCard({
+          ...newCard,
+          back: { ...newCard.back, image: base64 as string },
+        });
+      } else if (type === 'theme') {
+        setNewTheme({
+          ...newTheme,
+          coverImage: base64 as string,
+        });
+      }
     } catch (error) {
-      console.error("Error processing image:", error);
+      console.error("Error uploading image:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de traiter l'image",
+        description: "Impossible de charger l'image. Veuillez réessayer.",
         variant: "destructive",
       });
     }
   };
   
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     try {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "L'image ne doit pas dépasser 5 Mo",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const base64 = await getBase64(file);
       
-      if (side === 'front') {
+      if (type === 'front') {
         setNewCard({
           ...newCard,
-          front: { ...newCard.front, image: base64 },
+          front: { ...newCard.front, audio: base64 as string },
         });
-      } else {
+      } else if (type === 'back') {
         setNewCard({
           ...newCard,
-          back: { ...newCard.back, image: base64 },
+          back: { ...newCard.back, audio: base64 as string },
         });
       }
     } catch (error) {
-      console.error("Error processing image:", error);
+      console.error("Error uploading audio:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de traiter l'image",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    try {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "Le fichier audio ne doit pas dépasser 10 Mo",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!file.type.startsWith("audio/")) {
-        toast({
-          title: "Format non supporté",
-          description: "Veuillez sélectionner un fichier audio",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const base64 = await getBase64(file);
-      
-      if (side === 'front') {
-        setNewCard({
-          ...newCard,
-          front: { ...newCard.front, audio: base64 },
-        });
-      } else {
-        setNewCard({
-          ...newCard,
-          back: { ...newCard.back, audio: base64 },
-        });
-      }
-    } catch (error) {
-      console.error("Error processing audio:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de traiter le fichier audio",
+        description: "Impossible de charger l'audio. Veuillez réessayer.",
         variant: "destructive",
       });
     }
@@ -250,7 +190,7 @@ const DeckPage = () => {
     if (!newTheme.title.trim()) {
       toast({
         title: "Titre requis",
-        description: "Veuillez saisir un titre pour le thème",
+        description: "Veuillez ajouter un titre pour ce thème",
         variant: "destructive",
       });
       return;
@@ -366,10 +306,10 @@ const DeckPage = () => {
       setShareUrl(shareLink);
       setShareDialogOpen(true);
     } catch (error) {
-      console.error("Error creating share code:", error);
+      console.error("Error generating share link:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de créer le lien de partage",
+        description: "Impossible de générer le lien de partage",
         variant: "destructive",
       });
     }
@@ -379,150 +319,99 @@ const DeckPage = () => {
     navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Lien copié",
-      description: "Le lien de partage a été copié dans le presse-papier",
+      description: "Le lien a été copié dans le presse-papiers",
     });
   };
   
-  const handleNextCard = () => {
-    if (activeCardIndex < flashcards.length - 1) {
-      setActiveCardIndex(activeCardIndex + 1);
-    } else {
-      setActiveCardIndex(0);
-    }
-  };
-  
-  const handlePrevCard = () => {
-    if (activeCardIndex > 0) {
-      setActiveCardIndex(activeCardIndex - 1);
-    } else {
-      setActiveCardIndex(flashcards.length - 1);
-    }
-  };
-  
   if (isLoading) {
-    return (
-      <div className="container px-4 py-8 flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Chargement...</p>
-        </div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-[80vh]">Chargement...</div>;
   }
   
   if (!deck) {
-    return (
-      <div className="container px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">Deck introuvable</h1>
-          <p className="text-muted-foreground mb-6">
-            Le deck que vous recherchez n'existe pas ou a été supprimé.
-          </p>
-          <Button asChild>
-            <Link to="/">Retour à l'accueil</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    return <div className="text-center py-12">Deck introuvable</div>;
   }
   
   return (
-    <div className="w-full px-0 py-0">
-      <div className="px-2 py-2">
-        <Link to="/" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="mr-1 h-3 w-3" />
-          Retour
-        </Link>
-      </div>
-      
-      <div className="bg-white flex items-center gap-4 px-3 py-3">
-        {deck.coverImage ? (
-          <div className="w-24 h-24 rounded-md overflow-hidden">
-            <img
-              src={deck.coverImage}
-              alt={deck.title}
-              className="w-full h-full object-cover"
-            />
+    <div className="container max-w-screen-lg py-6 px-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full"
+              onClick={() => navigate("/home")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              <Link to="/home" className="hover:underline">Mes decks</Link>
+            </span>
           </div>
-        ) : (
-          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-md">
-            <BookOpen className="h-8 w-8 text-gray-400" />
-          </div>
-        )}
-        
-        <div className="flex-1">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <h1 className="text-lg font-bold">{deck?.title}</h1>
-              {deck?.authorId === getUser()?.id && (
-                <Button variant="ghost" size="icon" asChild className="h-5 w-5 p-0">
-                  <Link to={`/deck/${id}/edit`}>
-                    <Edit className="h-3 w-3" />
-                  </Link>
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mb-4 line-clamp-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">{deck.title}</h1>
+          {deck.description && (
+            <p className="text-muted-foreground text-sm mt-1 max-w-2xl">
               {deck.description}
             </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2 mt-2 sm:mt-0 self-end sm:self-auto">
+          {deck.authorId === user?.id && (
             <Button 
-              className="bg-black hover:bg-black/90 text-xs h-8 px-2 rounded-md"
-              onClick={() => navigate(`/deck/${id}/study`)}
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate(`/deck/${id}/edit`)}
+              className="text-xs h-8 px-2"
             >
-              <BookOpen className="mr-1 h-3 w-3" />
-              Étudier
+              <Edit className="mr-1 h-3 w-3" />
+              Modifier
             </Button>
-            
-            <Button variant="outline" onClick={generateShareLink} className="border text-xs h-8 px-2 rounded-md">
-              <Share2 className="mr-1 h-3 w-3" />
-              Partager
-            </Button>
-            
-            {deck?.authorId === getUser()?.id && (
-              <>
-                <Button variant="outline" onClick={() => setShowThemeDialog(true)} className="border text-xs h-8 px-2 rounded-md">
-                  <FolderPlus className="mr-1 h-3 w-3" />
-                  Thème
-                </Button>
-                
-                <Button variant="outline" onClick={() => setShowCardDialog(true)} className="border text-xs h-8 px-2 rounded-md">
-                  <PlusCircle className="mr-1 h-3 w-3" />
-                  Carte
-                </Button>
-              </>
-            )}
-          </div>
+          )}
           
-          <div className="flex flex-wrap items-center text-xs sm:text-sm text-muted-foreground">
-            <div className="flex items-center mr-2 mb-1 sm:mb-0">
-              <Avatar className="h-5 w-5 sm:h-6 sm:w-6 mr-1 sm:mr-2">
-                <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-                  {deck.authorId === user?.id ? user?.name.substring(0, 2).toUpperCase() : "AU"}
-                </AvatarFallback>
-              </Avatar>
-              <span>{deck.authorId === user?.id ? user?.name : "Autre utilisateur"}</span>
-            </div>
-            <Separator orientation="vertical" className="mx-1 sm:mx-2 h-4 hidden sm:block" />
-            <div className="flex items-center mr-2 mb-1 sm:mb-0">
-              <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span>{flashcards.length} cartes</span>
-            </div>
-            <Separator orientation="vertical" className="mx-1 sm:mx-2 h-4 hidden sm:block" />
-            <div className="flex items-center">
-              <Layers className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span>{themes.length} thèmes</span>
-            </div>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={generateShareLink}
+            className="text-xs h-8 px-2"
+          >
+            <Share2 className="mr-1 h-3 w-3" />
+            Partager
+          </Button>
+          
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={() => navigate(`/deck/${id}/study`)}
+            className="text-xs h-8 px-2 bg-black hover:bg-black/90"
+          >
+            <BookOpen className="mr-1 h-3 w-3" />
+            Étudier
+          </Button>
         </div>
       </div>
       
-      <Tabs defaultValue="cards" className="mt-8">
-        <TabsList className="mb-6 bg-secondary/20">
-          <TabsTrigger value="cards" className="data-[state=active]:bg-primary data-[state=active]:text-white">Toutes les cartes</TabsTrigger>
-          <TabsTrigger value="themes" className="data-[state=active]:bg-primary data-[state=active]:text-white">Thèmes</TabsTrigger>
+      <div className="flex items-center gap-2 mt-4 mb-2">
+        <Avatar className="h-6 w-6">
+          <AvatarFallback className="text-[10px] bg-primary/10">
+            {deck.author?.substring(0, 2).toUpperCase() || "?"}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-xs text-muted-foreground">{deck.author || "Utilisateur inconnu"}</span>
+        <span className="text-xs text-muted-foreground">•</span>
+        <span className="text-xs text-muted-foreground">
+          {themes.length} thème{themes.length !== 1 ? "s" : ""}
+        </span>
+        <span className="text-xs text-muted-foreground">•</span>
+        <span className="text-xs text-muted-foreground">
+          {flashcards.length} carte{flashcards.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+      
+      <Tabs defaultValue="cards" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="cards" className="text-sm">Cartes</TabsTrigger>
+          <TabsTrigger value="themes" className="text-sm">Thèmes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="cards" className="mt-0">
@@ -603,15 +492,14 @@ const DeckPage = () => {
             </div>
           ) : (
             <div className="text-center py-12 border rounded-lg bg-secondary/20">
-              <FolderPlus className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+              <Layers className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
               <h3 className="text-xl font-medium mb-2">Aucun thème</h3>
               <p className="text-muted-foreground mb-6">
                 Ce deck ne contient pas encore de thèmes
               </p>
               {deck?.authorId === getUser()?.id && (
-                <Button onClick={() => setShowThemeDialog(true)}
-                        className="text-xs sm:text-sm">
-                  <FolderPlus className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
+                <Button onClick={() => setShowThemeDialog(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   Ajouter un thème
                 </Button>
               )}
@@ -629,43 +517,52 @@ const DeckPage = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
               <Label htmlFor="theme-title">Titre</Label>
               <Input
                 id="theme-title"
-                placeholder="Ex: Vocabulaire de base"
+                placeholder="Ex: Chapitre 1 - Introduction"
                 value={newTheme.title}
                 onChange={(e) => setNewTheme({ ...newTheme, title: e.target.value })}
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="theme-description">Description</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="theme-description">Description (optionnelle)</Label>
               <Textarea
                 id="theme-description"
-                placeholder="Une brève description du thème..."
+                placeholder="Décrivez brièvement ce thème..."
                 rows={3}
+                className="resize-none"
                 value={newTheme.description}
                 onChange={(e) => setNewTheme({ ...newTheme, description: e.target.value })}
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label htmlFor="theme-image">Image de couverture (optionnelle)</Label>
               <Input
                 id="theme-image"
                 type="file"
                 accept="image/*"
-                onChange={handleThemeImageUpload}
+                onChange={(e) => handleImageUpload(e, 'theme')}
               />
               {newTheme.coverImage && (
-                <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border">
+                <div className="mt-2 relative">
                   <img
                     src={newTheme.coverImage}
                     alt="Theme cover"
-                    className="w-full h-full object-cover"
+                    className="w-full h-32 object-cover rounded"
                   />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6"
+                    onClick={() => setNewTheme({ ...newTheme, coverImage: undefined })}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
               )}
             </div>
@@ -889,7 +786,7 @@ const DeckPage = () => {
               Créer
             </Button>
           </DialogFooter>
-        </DialogContent>
+        </div>
       </Dialog>
       
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>

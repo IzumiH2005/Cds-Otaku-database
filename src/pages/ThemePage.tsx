@@ -411,7 +411,7 @@ const ThemePage = () => {
       
       {/* Add Card Dialog */}
       <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <DialogContent className="w-full max-w-md flashcard-form dialog-content-mobile">
+        <div className="flashcard-dialog-mobile bg-background">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-base">Ajouter une flashcard au thème {theme.title}</DialogTitle>
             <DialogDescription className="text-xs">
@@ -651,7 +651,7 @@ const ThemePage = () => {
               Ajouter la carte
             </Button>
           </DialogFooter>
-        </DialogContent>
+        </div>
       </Dialog>
     </div>
   );
