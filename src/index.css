@@ -350,16 +350,21 @@ html, body {
   }
   
   .dialog-content-mobile {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
     width: 90% !important;
-    max-width: 90% !important;
+    max-width: 400px !important;
     min-width: 90% !important;
     margin: 0 auto !important;
-    transform: none !important;
     max-height: 90vh !important;
     overflow-y: auto !important;
     transform-origin: center center !important;
     -webkit-transform-origin: center center !important;
     -webkit-overflow-scrolling: touch !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
   }
   
   /* Permettre un dezoom extrême */
