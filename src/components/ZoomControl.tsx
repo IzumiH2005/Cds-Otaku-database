@@ -67,6 +67,52 @@ export const ZoomControl: React.FC = () => {
     });
     document.body.classList.add(`zoom-level-${Math.round(value)}`);
     
+    // Détection de WebView ou mode application
+    const isWebView = 
+      /wv/.test(navigator.userAgent) || // Android WebView
+      /CriOS/.test(navigator.userAgent) || // Chrome iOS
+      ('standalone' in window.navigator && (window.navigator as any).standalone) || // iOS standalone app mode
+      window.matchMedia('(display-mode: standalone)').matches || // PWA mode
+      window.matchMedia('(display-mode: fullscreen)').matches; // PWA fullscreen
+    
+    // Adaptations spécifiques pour les WebViews et applications
+    if (isWebView || true) { // true pour forcer l'adaptation même sans détection (médian.co pourrait ne pas être détecté)
+      document.documentElement.classList.add('webview-mode');
+      
+      // Adapter le layout en fonction du niveau de zoom
+      if (value <= 50) {
+        // À petit zoom, on élargit le contenu pour éviter les espaces vides
+        document.documentElement.style.setProperty('--content-width', '150%');
+        document.documentElement.style.setProperty('--content-left', '-25%');
+        
+        // S'assurer que le contenu est correctement élargi
+        if (appContent) {
+          (appContent as HTMLElement).style.width = '150%';
+          (appContent as HTMLElement).style.left = '-25%';
+          (appContent as HTMLElement).style.position = 'relative';
+        }
+      } 
+      else if (value <= 70) {
+        document.documentElement.style.setProperty('--content-width', '130%');
+        document.documentElement.style.setProperty('--content-left', '-15%');
+        
+        if (appContent) {
+          (appContent as HTMLElement).style.width = '130%';
+          (appContent as HTMLElement).style.left = '-15%';
+          (appContent as HTMLElement).style.position = 'relative';
+        }
+      } 
+      else {
+        document.documentElement.style.setProperty('--content-width', '100%');
+        document.documentElement.style.setProperty('--content-left', '0');
+        
+        if (appContent) {
+          (appContent as HTMLElement).style.width = '100%';
+          (appContent as HTMLElement).style.left = '0';
+        }
+      }
+    }
+    
     // Déclencher un événement de redimensionnement pour que l'interface s'adapte
     window.dispatchEvent(new Event('resize'));
   };

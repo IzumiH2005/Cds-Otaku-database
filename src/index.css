@@ -246,17 +246,35 @@
 /* Niveaux de zoom différents */
 body.zoom-level-30 .app-content,
 body.zoom-level-40 .app-content,
-body.zoom-level-50 .app-content {
-  width: 150%; /* Élargissement pour compenser le petite échelle */
-  left: -25%;
+body.zoom-level-50 .app-content,
+html.webview-mode body.zoom-level-30 .app-content,
+html.webview-mode body.zoom-level-40 .app-content,
+html.webview-mode body.zoom-level-50 .app-content {
+  width: var(--content-width, 150%); /* Utiliser la variable CSS ou fallback à 150% */
+  left: var(--content-left, -25%);
   position: relative;
 }
 
 body.zoom-level-60 .app-content,
-body.zoom-level-70 .app-content {
-  width: 130%;
-  left: -15%;
+body.zoom-level-70 .app-content,
+html.webview-mode body.zoom-level-60 .app-content,
+html.webview-mode body.zoom-level-70 .app-content {
+  width: var(--content-width, 130%);
+  left: var(--content-left, -15%);
   position: relative;
+}
+
+/* Style spécial pour WebView */
+html.webview-mode {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+html.webview-mode body {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
 }
 
 /* Pied de page toujours en bas */
@@ -321,13 +339,47 @@ html, body {
 }
 
 /* S'assurer que les dialogues sont bien positionnés pendant le zoom */
-@media (max-width: 640px) {
+/* Support pour les applications mobiles et WebViews */
+@media (max-width: 640px), (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
   /* Support amélioré pour le zoom */
   body.dialog-open {
     overflow: hidden !important;
     height: 100% !important;
     position: fixed !important;
     width: 100% !important;
+  }
+  
+  /* Base styles pour optimiser les WebViews */
+  html, body {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    -webkit-text-size-adjust: 100% !important;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important;
+    touch-action: manipulation !important;
+  }
+  
+  /* Adapter l'interface de zoom aux WebViews */
+  .zoom-control-container {
+    position: fixed !important;
+    bottom: 80px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 9999 !important;
+    width: auto !important;
+    min-width: 120px !important;
+  }
+
+  /* Garantir que l'interface s'adapte au zoom */
+  body.zoom-level-30 .app-content,
+  body.zoom-level-40 .app-content,
+  body.zoom-level-50 .app-content {
+    width: 150% !important;
+    left: -25% !important;
+    position: relative !important;
+    transform-origin: top center !important;
   }
   
   [data-radix-popper-content-wrapper] {
