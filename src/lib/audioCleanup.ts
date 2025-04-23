@@ -48,21 +48,55 @@ export async function cleanupUnusedAudioFiles(): Promise<void> {
  * Programme un nettoyage périodique des fichiers audio
  * @param intervalInMinutes L'intervalle en minutes entre chaque nettoyage
  */
+// Variable pour stocker l'ID d'intervalle afin de pouvoir l'arrêter si nécessaire
+let cleanupIntervalId: number | null = null;
+
 export function schedulePeriodicCleanup(intervalInMinutes: number = 60): void {
   console.log(`Programmation du nettoyage des fichiers audio toutes les ${intervalInMinutes} minutes`);
   
-  // Planifier le nettoyage périodique
-  const intervalId = setInterval(() => {
-    cleanupUnusedAudioFiles().catch(console.error);
+  // Nettoyer tout intervalle existant pour éviter les doublons
+  if (cleanupIntervalId !== null) {
+    clearInterval(cleanupIntervalId);
+    cleanupIntervalId = null;
+  }
+  
+  // Planifier le nettoyage périodique avec une encapsulation de sécurité
+  cleanupIntervalId = window.setInterval(() => {
+    // Utiliser requestIdleCallback si disponible (pour ne pas interférer avec l'interface utilisateur)
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => {
+        cleanupUnusedAudioFiles().catch(err => 
+          console.error('Erreur lors du nettoyage périodique des fichiers audio:', err)
+        );
+      }, { timeout: 10000 }); // Timeout de 10 secondes max
+    } else {
+      // Fallback pour les navigateurs qui ne supportent pas requestIdleCallback
+      setTimeout(() => {
+        cleanupUnusedAudioFiles().catch(err => 
+          console.error('Erreur lors du nettoyage périodique des fichiers audio:', err)
+        );
+      }, 500); // Petit délai pour ne pas bloquer le thread principal
+    }
   }, intervalInMinutes * 60 * 1000);
   
   // S'assurer que l'intervalle est effacé lorsque la page est fermée
   window.addEventListener('beforeunload', () => {
-    clearInterval(intervalId);
+    if (cleanupIntervalId !== null) {
+      clearInterval(cleanupIntervalId);
+      cleanupIntervalId = null;
+    }
   });
   
-  // Effectuer un premier nettoyage après démarrage
+  // Effectuer un premier nettoyage après un délai plus important pour permettre
+  // à l'application de se charger complètement d'abord
   setTimeout(() => {
-    cleanupUnusedAudioFiles().catch(console.error);
-  }, 30000); // Attendre 30 secondes pour le premier nettoyage
+    // Utiliser requestIdleCallback pour le premier nettoyage également
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => {
+        cleanupUnusedAudioFiles().catch(console.error);
+      }, { timeout: 10000 });
+    } else {
+      cleanupUnusedAudioFiles().catch(console.error);
+    }
+  }, 60000); // Augmenter à 60 secondes pour s'assurer que l'application est stable
 }

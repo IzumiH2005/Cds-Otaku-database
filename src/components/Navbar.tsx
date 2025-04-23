@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, Plus, Search, User, Menu, X, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { DisplayModeToggle } from "@/components/DisplayModeToggle";
 
 const Navbar = () => {
@@ -10,15 +10,25 @@ const Navbar = () => {
   const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const toggleMenu = () => {
+  // Référence pour le conteneur du menu
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  
+  // Fonction sécurisée pour basculer l'état du menu
+  const toggleMenu = (e: React.MouseEvent) => {
+    // Empêcher la propagation pour éviter que l'événement ne soit capturé par d'autres éléments
+    e.stopPropagation();
+    
+    // Basculer l'état du menu de manière sécurisée
     setIsMenuOpen(prevState => !prevState);
   };
   
+  // Fermeture sécurisée du menu
   const closeMenu = () => {
-    // Petit délai pour éviter les bugs d'interface sur certains appareils mobiles
-    setTimeout(() => {
-      setIsMenuOpen(false);
-    }, 50);
+    if (!isMenuOpen) return; // Ne rien faire si le menu est déjà fermé
+    
+    // Fermer le menu immédiatement
+    setIsMenuOpen(false);
   };
   
   // Fermer le menu lorsque l'emplacement (la page) change
@@ -102,6 +112,7 @@ const Navbar = () => {
           </Button>
 
           <Button 
+            ref={buttonRef}
             variant="ghost" 
             size="icon" 
             className="h-9 w-9 md:hidden mobile-menu-button"
@@ -114,7 +125,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="container pb-3 md:hidden px-2 mobile-nav-container">
+        <div ref={menuRef} className="container pb-3 md:hidden px-2 mobile-nav-container">
           <nav className="flex flex-col space-y-2">
             <div className="flex items-center justify-between py-2 border-b mb-1 pb-2">
               <span className="text-xs font-medium">Mode d'affichage:</span>
