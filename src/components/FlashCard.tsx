@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Volume2, Info } from "lucide-react";
+import { Volume2, Info, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,6 +33,8 @@ const FlashCard = ({
   const [height, setHeight] = useState("auto");
   const [showFrontInfo, setShowFrontInfo] = useState(false);
   const [showBackInfo, setShowBackInfo] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [currentPlayingSide, setCurrentPlayingSide] = useState<'front' | 'back' | null>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -55,13 +57,28 @@ const FlashCard = ({
     }
   };
 
-  const playAudio = (audioSrc: string, e: React.MouseEvent) => {
+  const playAudio = (audioSrc: string, side: 'front' | 'back', e: React.MouseEvent) => {
     e.stopPropagation();
     if (audioRef.current) {
-      audioRef.current.src = audioSrc;
-      audioRef.current.play().catch(error => {
-        console.error("Error playing audio:", error);
-      });
+      // Si l'audio est déjà chargé et joue, on le met en pause
+      if (audioRef.current.src.endsWith(audioSrc) && !audioRef.current.paused) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+        setCurrentPlayingSide(null);
+      } else {
+        // Sinon, on charge la source si nécessaire et on joue
+        if (!audioRef.current.src.endsWith(audioSrc)) {
+          audioRef.current.src = audioSrc;
+        }
+        audioRef.current.play().then(() => {
+          setIsAudioPlaying(true);
+          setCurrentPlayingSide(side);
+        }).catch(error => {
+          console.error("Erreur lors de la lecture audio:", error);
+          setIsAudioPlaying(false);
+          setCurrentPlayingSide(null);
+        });
+      }
     }
   };
 
@@ -127,12 +144,18 @@ const FlashCard = ({
             
             {front.audio && (
               <Button
-                onClick={(e) => playAudio(front.audio!, e)}
+                onClick={(e) => playAudio(front.audio!, 'front', e)}
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-700"
+                className={cn(
+                  "h-6 w-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-700",
+                  isAudioPlaying && currentPlayingSide === 'front' && "bg-purple-200 dark:bg-purple-800"
+                )}
               >
-                <Volume2 className="h-3 w-3" />
+                {isAudioPlaying && currentPlayingSide === 'front' 
+                  ? <Pause className="h-3 w-3" /> 
+                  : <Volume2 className="h-3 w-3" />
+                }
               </Button>
             )}
           </div>
@@ -180,18 +203,35 @@ const FlashCard = ({
             
             {back.audio && (
               <Button
-                onClick={(e) => playAudio(back.audio!, e)}
+                onClick={(e) => playAudio(back.audio!, 'back', e)}
                 variant="outline"
                 size="icon"
-                className="h-6 w-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-700"
+                className={cn(
+                  "h-6 w-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-700",
+                  isAudioPlaying && currentPlayingSide === 'back' && "bg-purple-200 dark:bg-purple-800"
+                )}
               >
-                <Volume2 className="h-3 w-3" />
+                {isAudioPlaying && currentPlayingSide === 'back' 
+                  ? <Pause className="h-3 w-3" /> 
+                  : <Volume2 className="h-3 w-3" />
+                }
               </Button>
             )}
           </div>
         </div>
       </div>
-      <audio ref={audioRef} className="hidden" />
+      <audio 
+        ref={audioRef} 
+        className="hidden" 
+        onEnded={() => {
+          setIsAudioPlaying(false);
+          setCurrentPlayingSide(null);
+        }}
+        onPause={() => {
+          setIsAudioPlaying(false);
+          setCurrentPlayingSide(null);
+        }}
+      />
       
       <style>
         {`
@@ -246,8 +286,9 @@ const FlashCard = ({
         
         .flashcard-back {
           transform: rotateY(180deg);
-          background: linear-gradient(140deg, #d2c1ff 0%, #9d7fff 100%);
-          border: 1px solid rgba(157, 127, 255, 0.5);
+          background: linear-gradient(140deg, #ffb6dc 0%, #f38bc3 100%);
+          border: 1px solid rgba(243, 139, 195, 0.5);
+          box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.6), 0 2px 8px rgba(0, 0, 0, 0.15);
         }
         
         .flashcard-inner:hover {
