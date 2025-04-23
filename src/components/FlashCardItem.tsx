@@ -80,6 +80,8 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     if (!file) return;
 
     try {
+      console.log(`Traitement du fichier audio pour le côté ${side}:`, file.name, file.type, file.size);
+      
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "Fichier trop volumineux",
@@ -92,24 +94,36 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
       if (!file.type.startsWith("audio/")) {
         toast({
           title: "Format non supporté",
-          description: "Veuillez sélectionner un fichier audio",
+          description: "Veuillez sélectionner un fichier audio (format audio/*)",
           variant: "destructive",
         });
         return;
       }
 
+      console.log("Conversion du fichier audio en base64...");
       const base64 = await getBase64(file);
+      console.log("Taille de la chaîne base64:", base64.length);
+      
+      const updatedCard = { ...editingCard };
       if (side === 'front') {
-        setEditingCard({
-          ...editingCard,
-          front: { ...editingCard.front, audio: base64 },
-        });
+        updatedCard.front = { ...updatedCard.front, audio: base64 };
+        console.log("Audio ajouté au recto de la carte");
       } else {
-        setEditingCard({
-          ...editingCard,
-          back: { ...editingCard.back, audio: base64 },
-        });
+        updatedCard.back = { ...updatedCard.back, audio: base64 };
+        console.log("Audio ajouté au verso de la carte");
       }
+      
+      setEditingCard(updatedCard);
+      
+      // Vérification après mise à jour de l'état
+      console.log(`Audio ${side} après mise à jour:`, side === 'front' ? 
+        (updatedCard.front.audio ? "présent" : "absent") : 
+        (updatedCard.back.audio ? "présent" : "absent"));
+      
+      toast({
+        title: "Fichier audio ajouté",
+        description: "Le fichier audio a été ajouté avec succès",
+      });
     } catch (error) {
       console.error("Error processing audio:", error);
       toast({
@@ -140,31 +154,50 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
 
     try {
+      // Logging pour le débogage
+      console.log("Front audio avant mise à jour:", editingCard.front.audio ? "présent" : "absent");
+      console.log("Back audio avant mise à jour:", editingCard.back.audio ? "présent" : "absent");
+      
       const updatedFront = {
         text: editingCard.front.text.trim(),
         image: editingCard.front.image,
-        audio: editingCard.front.audio,
+        audio: editingCard.front.audio, // Garder l'audio même s'il est undefined
         additionalInfo: showFrontAdditionalInfo ? editingCard.front.additionalInfo.trim() : undefined
       };
 
       const updatedBack = {
         text: editingCard.back.text.trim(),
         image: editingCard.back.image,
-        audio: editingCard.back.audio,
+        audio: editingCard.back.audio, // Garder l'audio même s'il est undefined
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
       };
 
+      // Vérifier que les données updatedFront et updatedBack sont correctes
+      console.log("Données de mise à jour:", { front: updatedFront, back: updatedBack });
+      
       const updated = updateFlashcard(card.id, {
         front: updatedFront,
         back: updatedBack,
       });
 
       if (updated) {
+        // Vérifier que la carte mise à jour contient bien les données audio
+        console.log("Carte après mise à jour:", updated);
+        console.log("Front audio après mise à jour:", updated.front.audio ? "présent" : "absent");
+        console.log("Back audio après mise à jour:", updated.back.audio ? "présent" : "absent");
+        
         setShowEditDialog(false);
         onUpdate?.(updated);
         toast({
           title: "Carte mise à jour",
           description: "La flashcard a été modifiée avec succès",
+        });
+      } else {
+        console.error("La carte n'a pas été mise à jour correctement");
+        toast({
+          title: "Erreur",
+          description: "La mise à jour de la flashcard a échoué",
+          variant: "destructive",
         });
       }
     } catch (error) {
