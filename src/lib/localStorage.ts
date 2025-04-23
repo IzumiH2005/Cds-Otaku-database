@@ -386,53 +386,14 @@ export const createFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 
 };
 
 export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
-  console.log("Début de updateFlashcard pour l'ID:", id);
-  console.log("Données à mettre à jour:", cardData);
-  
-  // Vérifier les données audio pour le debugging
-  if (cardData.front?.audio) {
-    console.log("Audio pour le recto reçu, taille:", cardData.front.audio.length);
-  }
-  
-  if (cardData.back?.audio) {
-    console.log("Audio pour le verso reçu, taille:", cardData.back.audio.length);
-  }
-  
   const flashcards = getFlashcards();
   const foundCard = flashcards.find(card => card.id === id);
   
-  if (!foundCard) {
-    console.error("Carte non trouvée avec l'ID:", id);
-    return null;
-  }
+  if (!foundCard) return null;
   
-  console.log("Carte trouvée:", foundCard);
-  
-  // Créer une copie profonde de la carte trouvée
-  const cleanedCard = JSON.parse(JSON.stringify(foundCard));
-  
-  // Vérifier et nettoyer les données audio existantes dans foundCard
-  if (cleanedCard.front && typeof cleanedCard.front.audio === 'string' && cleanedCard.front.audio.length > 1000000) {
-    console.warn("Audio trop grand dans le recto de la carte, nettoyage...");
-    cleanedCard.front.audio = undefined;
-  }
-  
-  if (cleanedCard.back && typeof cleanedCard.back.audio === 'string' && cleanedCard.back.audio.length > 1000000) {
-    console.warn("Audio trop grand dans le verso de la carte, nettoyage...");
-    cleanedCard.back.audio = undefined;
-  }
-  
-  // Construction de la carte avec des mises à jour sécurisées
-  const updatedCard: Flashcard = { 
-    ...cleanedCard,
-    front: {
-      ...cleanedCard.front,
-      ...(cardData.front || {}),
-    },
-    back: {
-      ...cleanedCard.back,
-      ...(cardData.back || {}),
-    },
+  const updatedCard = { 
+    ...foundCard, 
+    ...cardData, 
     updatedAt: new Date().toISOString() 
   };
   
@@ -462,41 +423,8 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
         if (cardIndex !== -1) {
           // Mettre à jour la carte dans ce segment
           deckFlashcards[cardIndex] = updatedCard;
-          
-          try {
-            localStorage.setItem(deckSpecificKey, JSON.stringify(deckFlashcards));
-            console.log("Carte mise à jour avec succès dans le segment spécial");
-            return updatedCard;
-          } catch (storageError) {
-            console.error("Erreur lors de l'enregistrement dans localStorage (segment spécial):", storageError);
-            // Essayer de gérer l'erreur potentielle de quota/taille
-            if (storageError instanceof DOMException && 
-                (storageError.name === 'QuotaExceededError' || 
-                 storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-              console.warn("Erreur de quota localStorage, tentative de nettoyage...");
-              
-              // Réessayer sans l'audio 
-              if (updatedCard.front && updatedCard.front.audio) {
-                console.log("Suppression de l'audio du recto pour résoudre le problème de quota");
-                updatedCard.front.audio = undefined;
-              }
-              
-              if (updatedCard.back && updatedCard.back.audio) {
-                console.log("Suppression de l'audio du verso pour résoudre le problème de quota");
-                updatedCard.back.audio = undefined;
-              }
-              
-              deckFlashcards[cardIndex] = updatedCard;
-              
-              try {
-                localStorage.setItem(deckSpecificKey, JSON.stringify(deckFlashcards));
-                console.log("Carte mise à jour avec succès (sans audio)");
-                return updatedCard;
-              } catch (e) {
-                console.error("Échec même après suppression de l'audio:", e);
-              }
-            }
-          }
+          localStorage.setItem(deckSpecificKey, JSON.stringify(deckFlashcards));
+          return updatedCard;
         }
       }
     } catch (e) {
@@ -504,70 +432,16 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
     }
   }
   
-  // Essayer la mise à jour dans le stockage standard
-  try {
-    console.log("Tentative de mise à jour dans le stockage standard");
-    const standardUpdated = updateItem(
-      STORAGE_KEYS.FLASHCARDS,
-      id,
-      () => updatedCard,
-      'id',
-      []
-    );
-    
-    if (standardUpdated) {
-      console.log("Mise à jour réussie dans le stockage standard");
-      return updatedCard;
-    } else {
-      console.log("Échec de la mise à jour dans le stockage standard");
-      
-      // Méthode de secours: mise à jour manuelle
-      try {
-        const allFlashcards = getFlashcards();
-        const index = allFlashcards.findIndex(card => card.id === id);
-        
-        if (index !== -1) {
-          allFlashcards[index] = updatedCard;
-          localStorage.setItem(STORAGE_KEYS.FLASHCARDS, JSON.stringify(allFlashcards));
-          console.log("Mise à jour réussie via la méthode de secours");
-          return updatedCard;
-        }
-      } catch (fallbackError) {
-        console.error("Échec de la méthode de secours:", fallbackError);
-        
-        // Dernière tentative sans l'audio
-        if ((updatedCard.front && updatedCard.front.audio) || 
-            (updatedCard.back && updatedCard.back.audio)) {
-          
-          if (updatedCard.front && updatedCard.front.audio) {
-            updatedCard.front.audio = undefined;
-          }
-          
-          if (updatedCard.back && updatedCard.back.audio) {
-            updatedCard.back.audio = undefined;
-          }
-          
-          try {
-            const allFlashcards = getFlashcards();
-            const index = allFlashcards.findIndex(card => card.id === id);
-            
-            if (index !== -1) {
-              allFlashcards[index] = updatedCard;
-              localStorage.setItem(STORAGE_KEYS.FLASHCARDS, JSON.stringify(allFlashcards));
-              console.log("Mise à jour réussie sans audio");
-              return updatedCard;
-            }
-          } catch (noAudioError) {
-            console.error("Échec même sans audio:", noAudioError);
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Erreur lors de la mise à jour:", e);
-  }
+  // Sinon, essayer de mettre à jour dans le stockage standard
+  const standardUpdated = updateItem(
+    STORAGE_KEYS.FLASHCARDS,
+    id,
+    () => updatedCard,
+    'id',
+    []
+  );
   
-  return null;
+  return standardUpdated ? updatedCard : null;
 };
 
 export const deleteFlashcard = (id: string): boolean => {
@@ -907,53 +781,11 @@ export const getOriginalDeckIdForImported = (deckId: string): string | null => {
 
 // Image/Audio Utils
 export const getBase64 = (file: File): Promise<string> => {
-  // Définir une taille maximale de 5MB pour éviter de surcharger localStorage
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  
-  if (file.size > MAX_FILE_SIZE) {
-    console.warn(`Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(2)}MB), limite: ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-    return Promise.reject(new Error(`Le fichier est trop volumineux (${(file.size / (1024 * 1024)).toFixed(2)}MB). Veuillez choisir un fichier plus petit (max: ${MAX_FILE_SIZE / (1024 * 1024)}MB).`));
-  }
-  
   return new Promise((resolve, reject) => {
-    console.log(`Conversion en base64 du fichier: ${file.name}, type: ${file.type}, taille: ${(file.size / 1024).toFixed(2)}KB`);
-    
     const reader = new FileReader();
-    
-    // Configurer un timeout pour éviter les opérations trop longues
-    const timeout = setTimeout(() => {
-      reader.abort();
-      reject(new Error("La conversion a pris trop de temps. Veuillez essayer avec un fichier plus petit."));
-    }, 30000); // 30 secondes maximum
-    
-    reader.onload = () => {
-      clearTimeout(timeout);
-      const result = reader.result as string;
-      console.log(`Conversion réussie, taille du résultat: ${(result.length / 1024).toFixed(2)}KB`);
-      
-      // Vérifier que le résultat n'est pas trop grand pour localStorage
-      if (result.length > 2 * 1024 * 1024) { // ~2MB en base64
-        console.warn(`Résultat base64 trop volumineux: ${(result.length / (1024 * 1024)).toFixed(2)}MB`);
-        reject(new Error("Le fichier converti est trop volumineux pour être stocké. Veuillez choisir un fichier plus petit."));
-        return;
-      }
-      
-      resolve(result);
-    };
-    
-    reader.onerror = (error) => {
-      clearTimeout(timeout);
-      console.error("Erreur lors de la conversion en base64:", error);
-      reject(error);
-    };
-    
-    reader.onabort = () => {
-      clearTimeout(timeout);
-      console.warn("Conversion en base64 abandonnée");
-      reject(new Error("La conversion a été abandonnée."));
-    };
-    
     reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
   });
 };
 
