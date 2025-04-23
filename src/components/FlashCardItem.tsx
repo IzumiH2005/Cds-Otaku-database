@@ -107,12 +107,12 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         });
       }
       
-      // Vérification de la taille du fichier - ajustée à 5 Mo maximum
-      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5Mo
+      // Vérification de la taille du fichier - augmentée à 20 Mo maximum pour IndexedDB
+      const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20Mo
       if (file.size > MAX_FILE_SIZE) {
         toast({
           title: "Fichier trop volumineux",
-          description: `Le fichier audio ne doit pas dépasser 5 Mo (taille actuelle: ${(file.size / (1024 * 1024)).toFixed(2)} Mo)`,
+          description: `Le fichier audio ne doit pas dépasser 20 Mo (taille actuelle: ${(file.size / (1024 * 1024)).toFixed(2)} Mo)`,
           variant: "destructive",
         });
         // Réinitialiser l'input
@@ -125,29 +125,54 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         description: "Veuillez patienter pendant le traitement du fichier audio",
       });
 
+      // Importer dynamiquement pour éviter les erreurs de référence
+      const audioDBModule = await import('../lib/indexedDB');
+      
       console.log("Conversion du fichier audio en base64...");
       const base64 = await getBase64(file);
       console.log("Taille de la chaîne base64:", base64.length);
       
+      // Générer un ID unique pour le fichier audio
+      const audioId = audioDBModule.generateAudioId();
+      
+      // Sauvegarder le fichier audio dans IndexedDB
+      console.log("Sauvegarde du fichier audio dans IndexedDB...");
+      await audioDBModule.saveAudioToIndexedDB(audioId, base64, file.type);
+      
       // Faire une copie de l'état actuel
       const updatedCard = JSON.parse(JSON.stringify(editingCard));
       
-      // Mettre à jour le côté approprié
+      // Mettre à jour le côté approprié avec l'ID de référence au lieu du contenu
       if (side === 'front') {
-        updatedCard.front = { ...updatedCard.front, audio: base64 };
-        console.log("Audio ajouté au recto de la carte");
+        // Si un ancien audio existe, on le supprime de IndexedDB
+        if (updatedCard.front.audio && updatedCard.front.audio.startsWith('indexeddb:')) {
+          const oldAudioId = updatedCard.front.audio.replace('indexeddb:', '');
+          audioDBModule.deleteAudioFromIndexedDB(oldAudioId).catch(console.error);
+        }
+        
+        updatedCard.front = { 
+          ...updatedCard.front, 
+          audio: `indexeddb:${audioId}`,  // Utiliser un préfixe pour savoir que c'est dans IndexedDB
+          audioUrl: URL.createObjectURL(file) // URL temporaire pour l'affichage immédiat
+        };
+        console.log("Audio ajouté au recto de la carte avec ID:", audioId);
       } else {
-        updatedCard.back = { ...updatedCard.back, audio: base64 };
-        console.log("Audio ajouté au verso de la carte");
+        // Si un ancien audio existe, on le supprime de IndexedDB
+        if (updatedCard.back.audio && updatedCard.back.audio.startsWith('indexeddb:')) {
+          const oldAudioId = updatedCard.back.audio.replace('indexeddb:', '');
+          audioDBModule.deleteAudioFromIndexedDB(oldAudioId).catch(console.error);
+        }
+        
+        updatedCard.back = { 
+          ...updatedCard.back, 
+          audio: `indexeddb:${audioId}`,  // Utiliser un préfixe pour savoir que c'est dans IndexedDB
+          audioUrl: URL.createObjectURL(file) // URL temporaire pour l'affichage immédiat
+        };
+        console.log("Audio ajouté au verso de la carte avec ID:", audioId);
       }
       
       // Mettre à jour l'état
       setEditingCard(updatedCard);
-      
-      // Vérification après mise à jour de l'état
-      console.log(`Audio ${side} après mise à jour:`, side === 'front' ? 
-        (updatedCard.front.audio ? "présent" : "absent") : 
-        (updatedCard.back.audio ? "présent" : "absent"));
       
       toast({
         title: "Fichier audio ajouté",
@@ -174,7 +199,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     // Validation du contenu minimum
     if (!editingCard.front.text.trim() && !editingCard.front.image) {
       toast({
@@ -202,49 +227,42 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
       });
       
       // Logging pour le débogage
-      console.log("Front audio avant mise à jour:", editingCard.front.audio ? `présent (${editingCard.front.audio.length} caractères)` : "absent");
-      console.log("Back audio avant mise à jour:", editingCard.back.audio ? `présent (${editingCard.back.audio.length} caractères)` : "absent");
+      console.log("Front audio avant mise à jour:", editingCard.front.audio ? 
+        (editingCard.front.audio.startsWith('indexeddb:') ? 
+          `présent dans IndexedDB (ID: ${editingCard.front.audio.replace('indexeddb:', '')})` :
+          `présent (${editingCard.front.audio.length} caractères)`) : 
+        "absent");
       
-      // Vérification de la taille des fichiers audio pour éviter les problèmes de stockage
-      let frontAudio = editingCard.front.audio;
-      let backAudio = editingCard.back.audio;
+      console.log("Back audio avant mise à jour:", editingCard.back.audio ? 
+        (editingCard.back.audio.startsWith('indexeddb:') ? 
+          `présent dans IndexedDB (ID: ${editingCard.back.audio.replace('indexeddb:', '')})` :
+          `présent (${editingCard.back.audio.length} caractères)`) : 
+        "absent");
       
-      // Limite de taille pour les fichiers audio en base64 (environ 2MB)
-      const MAX_AUDIO_SIZE = 2 * 1024 * 1024;
-      
-      // Vérifier et nettoyer les données audio si elles sont trop volumineuses
-      if (frontAudio && frontAudio.length > MAX_AUDIO_SIZE) {
-        console.warn(`Audio du recto trop volumineux (${(frontAudio.length/1024/1024).toFixed(2)}MB), risque d'échec d'enregistrement`);
-        toast({
-          title: "Attention",
-          description: "Le fichier audio du recto est très volumineux, l'enregistrement pourrait échouer.",
-          variant: "destructive",
-        });
-      }
-      
-      if (backAudio && backAudio.length > MAX_AUDIO_SIZE) {
-        console.warn(`Audio du verso trop volumineux (${(backAudio.length/1024/1024).toFixed(2)}MB), risque d'échec d'enregistrement`);
-        toast({
-          title: "Attention",
-          description: "Le fichier audio du verso est très volumineux, l'enregistrement pourrait échouer.",
-          variant: "destructive",
-        });
-      }
-      
-      // Création des objets mis à jour avec des données nettoyées
+      // Création des objets mis à jour en gardant les références IndexedDB intactes
       const updatedFront = {
         text: editingCard.front.text.trim(),
         image: editingCard.front.image,
-        audio: frontAudio,
+        // Garder l'audio tel quel, qu'il soit dans IndexedDB ou dans localStorage
+        audio: editingCard.front.audio,
         additionalInfo: showFrontAdditionalInfo ? editingCard.front.additionalInfo?.trim() : undefined
       };
 
       const updatedBack = {
         text: editingCard.back.text.trim(),
         image: editingCard.back.image,
-        audio: backAudio,
+        // Garder l'audio tel quel, qu'il soit dans IndexedDB ou dans localStorage
+        audio: editingCard.back.audio,
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo?.trim() : undefined
       };
+      
+      // Nettoyer les propriétés temporaires qui ne doivent pas être stockées
+      if ('audioUrl' in updatedFront) {
+        delete (updatedFront as any).audioUrl;
+      }
+      if ('audioUrl' in updatedBack) {
+        delete (updatedBack as any).audioUrl;
+      }
 
       // Tenter la mise à jour avec les données optimisées
       console.log("Tentative de mise à jour de la carte...");
@@ -260,13 +278,37 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         console.log("Back audio après mise à jour:", updated.back.audio ? "présent" : "absent");
         
         // Si les données audio sont manquantes dans la carte mise à jour, avertir l'utilisateur
-        if ((frontAudio && !updated.front.audio) || (backAudio && !updated.back.audio)) {
+        const frontAudioLost = editingCard.front.audio && !updated.front.audio;
+        const backAudioLost = editingCard.back.audio && !updated.back.audio;
+        
+        if (frontAudioLost || backAudioLost) {
           console.warn("Certains fichiers audio n'ont pas pu être enregistrés");
           toast({
             title: "Carte mise à jour partiellement",
-            description: "La carte a été mise à jour, mais certains fichiers audio n'ont pas pu être enregistrés en raison de leur taille.",
+            description: "La carte a été mise à jour, mais certains fichiers audio n'ont pas pu être enregistrés.",
             variant: "destructive",
           });
+          
+          // Si les fichiers audio sont perdus, supprimer leurs références dans IndexedDB si applicable
+          if (frontAudioLost && editingCard.front.audio?.startsWith('indexeddb:')) {
+            try {
+              const audioDBModule = await import('../lib/indexedDB');
+              const audioId = editingCard.front.audio.replace('indexeddb:', '');
+              await audioDBModule.deleteAudioFromIndexedDB(audioId);
+            } catch (e) {
+              console.error("Impossible de supprimer le fichier audio du recto:", e);
+            }
+          }
+          
+          if (backAudioLost && editingCard.back.audio?.startsWith('indexeddb:')) {
+            try {
+              const audioDBModule = await import('../lib/indexedDB');
+              const audioId = editingCard.back.audio.replace('indexeddb:', '');
+              await audioDBModule.deleteAudioFromIndexedDB(audioId);
+            } catch (e) {
+              console.error("Impossible de supprimer le fichier audio du verso:", e);
+            }
+          }
         } else {
           toast({
             title: "Carte mise à jour",
@@ -281,6 +323,12 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         
         // En cas d'échec, tenter une seconde fois sans les fichiers audio
         console.log("Tentative de mise à jour sans les fichiers audio...");
+        
+        // Conserver les IDs des fichiers audio pour pouvoir les supprimer si nécessaire
+        const frontAudioId = updatedFront.audio?.startsWith('indexeddb:') ? 
+          updatedFront.audio.replace('indexeddb:', '') : null;
+        const backAudioId = updatedBack.audio?.startsWith('indexeddb:') ? 
+          updatedBack.audio.replace('indexeddb:', '') : null;
         
         const fallbackFront = { ...updatedFront, audio: undefined };
         const fallbackBack = { ...updatedBack, audio: undefined };
@@ -297,6 +345,19 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
             description: "La carte a été enregistrée, mais sans les fichiers audio qui étaient trop volumineux.",
             variant: "destructive",
           });
+          
+          // Supprimer les fichiers audio d'IndexedDB si la version sans audio est enregistrée
+          try {
+            const audioDBModule = await import('../lib/indexedDB');
+            if (frontAudioId) {
+              await audioDBModule.deleteAudioFromIndexedDB(frontAudioId);
+            }
+            if (backAudioId) {
+              await audioDBModule.deleteAudioFromIndexedDB(backAudioId);
+            }
+          } catch (e) {
+            console.error("Impossible de supprimer les fichiers audio orphelins:", e);
+          }
           
           setShowEditDialog(false);
           onUpdate?.(fallbackUpdated);
@@ -318,10 +379,40 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
+      // Vérifier s'il y a des fichiers audio dans IndexedDB à supprimer
+      const audioIdsToDelete = [];
+      
+      if (card.front.audio?.startsWith('indexeddb:')) {
+        audioIdsToDelete.push(card.front.audio.replace('indexeddb:', ''));
+      }
+      
+      if (card.back.audio?.startsWith('indexeddb:')) {
+        audioIdsToDelete.push(card.back.audio.replace('indexeddb:', ''));
+      }
+      
+      // Supprimer la carte
       const success = deleteFlashcard(card.id);
+      
       if (success) {
+        // Si la suppression a réussi, nettoyer les fichiers audio d'IndexedDB
+        if (audioIdsToDelete.length > 0) {
+          try {
+            const audioDBModule = await import('../lib/indexedDB');
+            
+            for (const audioId of audioIdsToDelete) {
+              console.log(`Suppression du fichier audio ${audioId} d'IndexedDB...`);
+              await audioDBModule.deleteAudioFromIndexedDB(audioId);
+            }
+            
+            console.log(`${audioIdsToDelete.length} fichier(s) audio supprimé(s) d'IndexedDB`);
+          } catch (e) {
+            console.error("Erreur lors de la suppression des fichiers audio:", e);
+            // On ne considère pas ça comme une erreur bloquante
+          }
+        }
+        
         setShowDeleteDialog(false);
         onDelete?.();
         toast({

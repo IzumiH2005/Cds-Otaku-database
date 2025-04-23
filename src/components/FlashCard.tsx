@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Volume2, Info, Pause } from "lucide-react";
+import { Volume2, Info, Pause, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import * as indexedDB from "../lib/indexedDB";
 
 export interface FlashCardProps {
   id: string;
@@ -57,28 +58,117 @@ const FlashCard = ({
     }
   };
 
-  const playAudio = (audioSrc: string, side: 'front' | 'back', e: React.MouseEvent) => {
+  // Audio déjà chargé depuis IndexedDB et converti en ObjectURL
+  const [audioObjectURLs, setAudioObjectURLs] = useState<Record<string, string>>({});
+  // États d'erreur pour chaque audio
+  const [audioErrors, setAudioErrors] = useState<Record<string, boolean>>({});
+  
+  // Fonction pour récupérer l'audio depuis IndexedDB
+  const getAudioFromIndexedDBIfNeeded = async (audioSrc: string): Promise<string> => {
+    // Si c'est déjà un URL d'objet que nous avons généré, le retourner directement
+    if (audioObjectURLs[audioSrc]) {
+      return audioObjectURLs[audioSrc];
+    }
+    
+    // Si c'est une référence à IndexedDB (préfixe 'indexeddb:')
+    if (audioSrc.startsWith('indexeddb:')) {
+      try {
+        const audioId = audioSrc.replace('indexeddb:', '');
+        console.log(`Récupération de l'audio ${audioId} depuis IndexedDB...`);
+        
+        // Récupérer le contenu audio depuis IndexedDB
+        const audioData = await indexedDB.getAudioFromIndexedDB(audioId);
+        
+        if (!audioData) {
+          console.error(`Audio ${audioId} non trouvé dans IndexedDB`);
+          setAudioErrors(prev => ({ ...prev, [audioSrc]: true }));
+          return '';
+        }
+        
+        // Créer un Blob à partir des données base64
+        const binaryString = atob(audioData.split(',').pop() || audioData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Déterminer le type MIME
+        const type = audioData.startsWith('data:') 
+          ? audioData.split(';')[0].split(':')[1] 
+          : 'audio/mpeg'; // Par défaut si non spécifié
+        
+        const blob = new Blob([bytes], { type });
+        
+        // Créer une URL pour le Blob
+        const url = URL.createObjectURL(blob);
+        
+        // Conserver l'URL pour une utilisation ultérieure
+        setAudioObjectURLs(prev => ({ ...prev, [audioSrc]: url }));
+        
+        console.log(`Audio ${audioId} récupéré avec succès et converti en URL:`, url);
+        return url;
+      } catch (error) {
+        console.error("Erreur lors de la récupération audio depuis IndexedDB:", error);
+        setAudioErrors(prev => ({ ...prev, [audioSrc]: true }));
+        return '';
+      }
+    }
+    
+    // Si c'est une URL directe ou une chaîne base64, la retourner telle quelle
+    return audioSrc;
+  };
+  
+  // Nettoyage des URL d'objets créés
+  useEffect(() => {
+    return () => {
+      // Libérer toutes les URL d'objets lors du démontage du composant
+      Object.values(audioObjectURLs).forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+    };
+  }, [audioObjectURLs]);
+
+  const playAudio = async (audioSrc: string, side: 'front' | 'back', e: React.MouseEvent) => {
     e.stopPropagation();
-    if (audioRef.current) {
-      // Si l'audio est déjà chargé et joue, on le met en pause
-      if (audioRef.current.src.endsWith(audioSrc) && !audioRef.current.paused) {
+    if (!audioRef.current) return;
+    
+    // Si nous avons déjà détecté une erreur avec cet audio, ne pas réessayer
+    if (audioErrors[audioSrc]) {
+      console.warn(`Lecture audio ignorée pour ${audioSrc} en raison d'erreurs précédentes`);
+      return;
+    }
+    
+    try {
+      // Si l'audio est en train de jouer, le mettre en pause
+      if (isAudioPlaying && currentPlayingSide === side) {
         audioRef.current.pause();
         setIsAudioPlaying(false);
         setCurrentPlayingSide(null);
-      } else {
-        // Sinon, on charge la source si nécessaire et on joue
-        if (!audioRef.current.src.endsWith(audioSrc)) {
-          audioRef.current.src = audioSrc;
-        }
-        audioRef.current.play().then(() => {
-          setIsAudioPlaying(true);
-          setCurrentPlayingSide(side);
-        }).catch(error => {
-          console.error("Erreur lors de la lecture audio:", error);
-          setIsAudioPlaying(false);
-          setCurrentPlayingSide(null);
-        });
+        return;
       }
+      
+      // Récupérer l'URL effective de l'audio (depuis IndexedDB si nécessaire)
+      const effectiveAudioSrc = await getAudioFromIndexedDBIfNeeded(audioSrc);
+      
+      if (!effectiveAudioSrc) {
+        console.error("Impossible de récupérer l'audio");
+        setAudioErrors(prev => ({ ...prev, [audioSrc]: true }));
+        return;
+      }
+      
+      // Charger la nouvelle source et jouer
+      audioRef.current.src = effectiveAudioSrc;
+      
+      // Jouer l'audio
+      await audioRef.current.play();
+      setIsAudioPlaying(true);
+      setCurrentPlayingSide(side);
+      
+    } catch (error) {
+      console.error("Erreur lors de la lecture audio:", error);
+      setIsAudioPlaying(false);
+      setCurrentPlayingSide(null);
+      setAudioErrors(prev => ({ ...prev, [audioSrc]: true }));
     }
   };
 

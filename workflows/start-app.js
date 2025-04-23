@@ -1,26 +1,27 @@
-// Workflow pour démarrer l'application
-import { spawn } from 'child_process';
-
 console.log('🚀 Démarrage de l\'application...');
 
-// Démarrer l'application avec npm
-const app = spawn('npm', ['run', 'dev'], {
+import { spawn } from 'child_process';
+import process from 'process';
+
+// Démarrer l'application avec Vite en mode développement
+const vite = spawn('npx', ['vite'], {
   stdio: 'inherit',
-  shell: true
+  shell: true,
 });
 
-app.on('error', (error) => {
-  console.error('❌ Erreur lors du démarrage de l\'application:', error);
+// Gérer la sortie propre
+process.on('SIGINT', () => {
+  console.log('Arrêt de l\'application...');
+  vite.kill('SIGINT');
+  process.exit(0);
+});
+
+vite.on('error', (error) => {
+  console.error('Erreur lors du démarrage de l\'application:', error);
   process.exit(1);
 });
 
-// Gestion des signaux pour arrêter proprement l'application
-process.on('SIGINT', () => {
-  console.log('🛑 Arrêt de l\'application...');
-  app.kill('SIGINT');
-});
-
-process.on('SIGTERM', () => {
-  console.log('🛑 Arrêt de l\'application...');
-  app.kill('SIGTERM');
+vite.on('close', (code) => {
+  console.log(`L'application s'est arrêtée avec le code: ${code}`);
+  process.exit(code);
 });
