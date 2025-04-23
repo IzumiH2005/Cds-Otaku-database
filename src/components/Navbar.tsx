@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, Plus, Search, User, Menu, X, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DisplayModeToggle } from "@/components/DisplayModeToggle";
 
 const Navbar = () => {
@@ -11,8 +11,40 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setIsMenuOpen(prevState => !prevState);
   };
+  
+  const closeMenu = () => {
+    // Petit délai pour éviter les bugs d'interface sur certains appareils mobiles
+    setTimeout(() => {
+      setIsMenuOpen(false);
+    }, 50);
+  };
+  
+  // Fermer le menu lorsque l'emplacement (la page) change
+  useEffect(() => {
+    closeMenu();
+  }, [location.pathname]);
+  
+  // Fermer le menu lorsque l'utilisateur clique à l'extérieur
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Vérifier si le clic est à l'extérieur du menu et du bouton du menu
+      if (!target.closest('.mobile-nav-container') && 
+          !target.closest('.mobile-menu-button')) {
+        closeMenu();
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-sm">
@@ -72,7 +104,7 @@ const Navbar = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 md:hidden"
+            className="h-9 w-9 md:hidden mobile-menu-button"
             onClick={toggleMenu}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -82,7 +114,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="container pb-3 md:hidden px-2">
+        <div className="container pb-3 md:hidden px-2 mobile-nav-container">
           <nav className="flex flex-col space-y-2">
             <div className="flex items-center justify-between py-2 border-b mb-1 pb-2">
               <span className="text-xs font-medium">Mode d'affichage:</span>
@@ -91,7 +123,7 @@ const Navbar = () => {
             <Link 
               to="/" 
               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/' ? 'bg-primary/10 text-primary' : ''}`}
-              onClick={toggleMenu}
+              onClick={closeMenu}
             >
               <Home className="h-4 w-4" />
               Accueil
@@ -99,7 +131,7 @@ const Navbar = () => {
             <Link 
               to="/explore" 
               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/explore' ? 'bg-primary/10 text-primary' : ''}`}
-              onClick={toggleMenu}
+              onClick={closeMenu}
             >
               <Search className="h-4 w-4" />
               Explorer
@@ -107,7 +139,7 @@ const Navbar = () => {
             <Link 
               to="/create" 
               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/create' ? 'bg-primary/10 text-primary' : ''}`}
-              onClick={toggleMenu}
+              onClick={closeMenu}
             >
               <Plus className="h-4 w-4" />
               Créer
@@ -115,7 +147,7 @@ const Navbar = () => {
             <Link 
               to="/profile" 
               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/profile' ? 'bg-primary/10 text-primary' : ''}`}
-              onClick={toggleMenu}
+              onClick={closeMenu}
             >
               <User className="h-4 w-4" />
               Profil
@@ -123,7 +155,7 @@ const Navbar = () => {
             <Link 
               to="/my-decks" 
               className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${location.pathname === '/my-decks' ? 'bg-primary/10 text-primary' : ''}`}
-              onClick={toggleMenu}
+              onClick={closeMenu}
             >
               <Folder className="h-4 w-4" />
               Mes Decks

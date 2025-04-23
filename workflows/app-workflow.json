@@ -1,0 +1,11 @@
+{
+  "name": "Application",
+  "entrypoint": "workflows/start-app.js",
+  "isForeground": true,
+  "restartOn": {
+    "directoryChange": [
+      "src/", 
+      "public/"
+    ]
+  }
+}
