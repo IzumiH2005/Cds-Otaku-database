@@ -82,29 +82,57 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     try {
       console.log(`Traitement du fichier audio pour le côté ${side}:`, file.name, file.type, file.size);
       
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "Le fichier audio ne doit pas dépasser 10 Mo",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      // Vérifier si le fichier est un type audio reconnu
+      const supportedAudioTypes = [
+        "audio/mpeg", "audio/mp3", "audio/mp4", "audio/ogg", 
+        "audio/wav", "audio/x-wav", "audio/webm", "audio/aac"
+      ];
+      
       if (!file.type.startsWith("audio/")) {
         toast({
           title: "Format non supporté",
           description: "Veuillez sélectionner un fichier audio (format audio/*)",
           variant: "destructive",
         });
+        // Réinitialiser l'input
+        e.target.value = "";
         return;
       }
+      
+      if (!supportedAudioTypes.includes(file.type)) {
+        console.warn("Type audio non standard:", file.type);
+        toast({
+          title: "Format d'audio non standard",
+          description: "Ce format audio pourrait ne pas être pris en charge par tous les navigateurs. Nous recommandons MP3, WAV ou OGG.",
+        });
+      }
+      
+      // Vérification de la taille du fichier - ajustée à 5 Mo maximum
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5Mo
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: `Le fichier audio ne doit pas dépasser 5 Mo (taille actuelle: ${(file.size / (1024 * 1024)).toFixed(2)} Mo)`,
+          variant: "destructive",
+        });
+        // Réinitialiser l'input
+        e.target.value = "";
+        return;
+      }
+
+      toast({
+        title: "Traitement en cours...",
+        description: "Veuillez patienter pendant le traitement du fichier audio",
+      });
 
       console.log("Conversion du fichier audio en base64...");
       const base64 = await getBase64(file);
       console.log("Taille de la chaîne base64:", base64.length);
       
-      const updatedCard = { ...editingCard };
+      // Faire une copie de l'état actuel
+      const updatedCard = JSON.parse(JSON.stringify(editingCard));
+      
+      // Mettre à jour le côté approprié
       if (side === 'front') {
         updatedCard.front = { ...updatedCard.front, audio: base64 };
         console.log("Audio ajouté au recto de la carte");
@@ -113,6 +141,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         console.log("Audio ajouté au verso de la carte");
       }
       
+      // Mettre à jour l'état
       setEditingCard(updatedCard);
       
       // Vérification après mise à jour de l'état
@@ -122,19 +151,31 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
       
       toast({
         title: "Fichier audio ajouté",
-        description: "Le fichier audio a été ajouté avec succès",
+        description: "Le fichier audio a été ajouté avec succès et sera enregistré avec la carte",
       });
-    } catch (error) {
+      
+      // Réinitialiser l'input pour permettre de sélectionner à nouveau le même fichier si nécessaire
+      e.target.value = "";
+      
+    } catch (error: any) {
       console.error("Error processing audio:", error);
+      
+      // Réinitialiser l'input
+      e.target.value = "";
+      
+      // Afficher un message spécifique si possible
+      const errorMessage = error.message || "Impossible de traiter le fichier audio";
+      
       toast({
         title: "Erreur",
-        description: "Impossible de traiter le fichier audio",
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
   const handleUpdate = () => {
+    // Validation du contenu minimum
     if (!editingCard.front.text.trim() && !editingCard.front.image) {
       toast({
         title: "Contenu requis",
@@ -154,27 +195,59 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
 
     try {
-      // Logging pour le débogage
-      console.log("Front audio avant mise à jour:", editingCard.front.audio ? "présent" : "absent");
-      console.log("Back audio avant mise à jour:", editingCard.back.audio ? "présent" : "absent");
+      // Notification de début de mise à jour
+      toast({
+        title: "Mise à jour en cours",
+        description: "Veuillez patienter pendant l'enregistrement de la carte...",
+      });
       
+      // Logging pour le débogage
+      console.log("Front audio avant mise à jour:", editingCard.front.audio ? `présent (${editingCard.front.audio.length} caractères)` : "absent");
+      console.log("Back audio avant mise à jour:", editingCard.back.audio ? `présent (${editingCard.back.audio.length} caractères)` : "absent");
+      
+      // Vérification de la taille des fichiers audio pour éviter les problèmes de stockage
+      let frontAudio = editingCard.front.audio;
+      let backAudio = editingCard.back.audio;
+      
+      // Limite de taille pour les fichiers audio en base64 (environ 2MB)
+      const MAX_AUDIO_SIZE = 2 * 1024 * 1024;
+      
+      // Vérifier et nettoyer les données audio si elles sont trop volumineuses
+      if (frontAudio && frontAudio.length > MAX_AUDIO_SIZE) {
+        console.warn(`Audio du recto trop volumineux (${(frontAudio.length/1024/1024).toFixed(2)}MB), risque d'échec d'enregistrement`);
+        toast({
+          title: "Attention",
+          description: "Le fichier audio du recto est très volumineux, l'enregistrement pourrait échouer.",
+          variant: "destructive",
+        });
+      }
+      
+      if (backAudio && backAudio.length > MAX_AUDIO_SIZE) {
+        console.warn(`Audio du verso trop volumineux (${(backAudio.length/1024/1024).toFixed(2)}MB), risque d'échec d'enregistrement`);
+        toast({
+          title: "Attention",
+          description: "Le fichier audio du verso est très volumineux, l'enregistrement pourrait échouer.",
+          variant: "destructive",
+        });
+      }
+      
+      // Création des objets mis à jour avec des données nettoyées
       const updatedFront = {
         text: editingCard.front.text.trim(),
         image: editingCard.front.image,
-        audio: editingCard.front.audio, // Garder l'audio même s'il est undefined
-        additionalInfo: showFrontAdditionalInfo ? editingCard.front.additionalInfo.trim() : undefined
+        audio: frontAudio,
+        additionalInfo: showFrontAdditionalInfo ? editingCard.front.additionalInfo?.trim() : undefined
       };
 
       const updatedBack = {
         text: editingCard.back.text.trim(),
         image: editingCard.back.image,
-        audio: editingCard.back.audio, // Garder l'audio même s'il est undefined
-        additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
+        audio: backAudio,
+        additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo?.trim() : undefined
       };
 
-      // Vérifier que les données updatedFront et updatedBack sont correctes
-      console.log("Données de mise à jour:", { front: updatedFront, back: updatedBack });
-      
+      // Tenter la mise à jour avec les données optimisées
+      console.log("Tentative de mise à jour de la carte...");
       const updated = updateFlashcard(card.id, {
         front: updatedFront,
         back: updatedBack,
@@ -182,29 +255,64 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
 
       if (updated) {
         // Vérifier que la carte mise à jour contient bien les données audio
-        console.log("Carte après mise à jour:", updated);
+        console.log("Carte mise à jour avec succès");
         console.log("Front audio après mise à jour:", updated.front.audio ? "présent" : "absent");
         console.log("Back audio après mise à jour:", updated.back.audio ? "présent" : "absent");
         
+        // Si les données audio sont manquantes dans la carte mise à jour, avertir l'utilisateur
+        if ((frontAudio && !updated.front.audio) || (backAudio && !updated.back.audio)) {
+          console.warn("Certains fichiers audio n'ont pas pu être enregistrés");
+          toast({
+            title: "Carte mise à jour partiellement",
+            description: "La carte a été mise à jour, mais certains fichiers audio n'ont pas pu être enregistrés en raison de leur taille.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Carte mise à jour",
+            description: "La flashcard a été modifiée avec succès",
+          });
+        }
+        
         setShowEditDialog(false);
         onUpdate?.(updated);
-        toast({
-          title: "Carte mise à jour",
-          description: "La flashcard a été modifiée avec succès",
-        });
       } else {
         console.error("La carte n'a pas été mise à jour correctement");
-        toast({
-          title: "Erreur",
-          description: "La mise à jour de la flashcard a échoué",
-          variant: "destructive",
+        
+        // En cas d'échec, tenter une seconde fois sans les fichiers audio
+        console.log("Tentative de mise à jour sans les fichiers audio...");
+        
+        const fallbackFront = { ...updatedFront, audio: undefined };
+        const fallbackBack = { ...updatedBack, audio: undefined };
+        
+        const fallbackUpdated = updateFlashcard(card.id, {
+          front: fallbackFront,
+          back: fallbackBack,
         });
+        
+        if (fallbackUpdated) {
+          console.log("Mise à jour réussie sans les fichiers audio");
+          toast({
+            title: "Carte mise à jour partiellement",
+            description: "La carte a été enregistrée, mais sans les fichiers audio qui étaient trop volumineux.",
+            variant: "destructive",
+          });
+          
+          setShowEditDialog(false);
+          onUpdate?.(fallbackUpdated);
+        } else {
+          toast({
+            title: "Erreur",
+            description: "La mise à jour de la flashcard a échoué. Essayez de réduire la taille des médias ou de les supprimer.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error("Error updating flashcard:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour la flashcard",
+        description: "Impossible de mettre à jour la flashcard. Vérifiez la taille des fichiers audio et images.",
         variant: "destructive",
       });
     }
