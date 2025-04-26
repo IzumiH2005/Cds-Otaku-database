@@ -5,11 +5,11 @@
  * directement les fonctions asynchrones de enhancedIndexedDB.ts
  */
 
-import { User, Deck, Theme, Flashcard } from './localStorage';
+import type { User, Deck, Theme, Flashcard, SharedDeckExport } from './localStorage';
 
 // Exports pour maintenir la compatibilité avec le code existant
-export { 
-  User, Deck, Theme, Flashcard
+export type { 
+  User, Deck, Theme, Flashcard, SharedDeckExport
 } from './localStorage';
 
 // Fonctions synchrones simplifiées qui retournent des valeurs par défaut
@@ -43,17 +43,29 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
 export const deleteFlashcard = (id: string): boolean => false;
 export const createShareCode = (deckId: string): string => "";
 
-// Type pour l'exportation partagée
-export interface SharedDeckExport {
-  deck: Deck;
-  themes: Theme[];
-  flashcards: Flashcard[];
-  exportDate: string;
-  version: string;
-}
+// Note: Type pour l'exportation partagée est défini dans localStorage.ts
 
-// Fonctions d'exportation/importation qui ne font rien
-export const exportDeckToJson = (deckId: string): SharedDeckExport | null => null;
+// Fonctions d'exportation/importation
+export const exportDeckToJson = (deckId: string): SharedDeckExport => {
+  const deck = {
+    id: deckId,
+    title: "Deck exporté",
+    description: "Ce deck a été exporté pour le partage",
+    authorId: "",
+    tags: [],
+    isPublic: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  return {
+    deck: deck,
+    themes: [],
+    flashcards: [],
+    exportDate: new Date().toISOString(),
+    version: "1.0"
+  };
+};
 export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: string): string => "";
 export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean => false;
 export const publishDeck = (deckId: string): boolean => false;

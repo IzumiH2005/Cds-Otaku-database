@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Download } from "lucide-react";
-import { exportDeckToJson, getDecks } from "@/lib/localStorage";
+import { exportDeckToJson, getDecks } from "@/lib/storageCompatLayer";
 import { useToast } from "@/hooks/use-toast";
 
 interface DeckExporterProps {
@@ -17,7 +17,7 @@ const DeckExporter = ({ selectedDeck, onDeckSelect }: DeckExporterProps) => {
   const [jsonContent, setJsonContent] = useState<string>("");
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const { toast } = useToast();
-  const decks = getDecks().filter(deck => !deck.isPublished);
+  const decks = getDecks().filter(deck => deck.isPublic !== true);
   
   const handleExport = async () => {
     if (!selectedDeck) {
@@ -40,7 +40,7 @@ const DeckExporter = ({ selectedDeck, onDeckSelect }: DeckExporterProps) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${exportedDeck.title.replace(/\s+/g, '_')}_deck.json`;
+      a.download = `${exportedDeck.deck?.title?.replace(/\s+/g, '_') || 'exported'}_deck.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

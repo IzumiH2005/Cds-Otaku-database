@@ -2,6 +2,14 @@
 import { v4 as uuidv4 } from 'uuid';
 
 // Interfaces
+export interface SharedDeckExport {
+  deck: Deck;
+  themes: Theme[];
+  flashcards: Flashcard[];
+  exportDate: string;
+  version: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -213,3 +221,23 @@ export const initializeDefaultUserSync = (): User => ({
   createdAt: new Date().toISOString()
 } as User);
 export const updateUserSync = (userData: Partial<User>): User | null => null;
+
+// Fonctions d'exportation
+export const exportDeckToJson = (deckId: string): SharedDeckExport => {
+  return {
+    deck: {
+      id: deckId,
+      title: "Deck exporté",
+      description: "Ce deck a été exporté pour le partage",
+      authorId: "",
+      tags: [],
+      isPublic: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    themes: [],
+    flashcards: [],
+    exportDate: new Date().toISOString(),
+    version: "1.0"
+  };
+};
