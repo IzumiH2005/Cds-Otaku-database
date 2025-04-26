@@ -204,3 +204,82 @@ export const verifySessionSync = (key: string): boolean => {
   
   return true;
 };
+
+// Fonctions d'étude et de statistiques
+export const recordCardStudy = async (correct: boolean): Promise<void> => {
+  try {
+    const userData = await IndexedDB.loadData(USER_DATA_KEY, {
+      stats: {
+        cardsStudied: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0
+      }
+    });
+    
+    // S'assurer que les stats existent
+    if (!userData.stats) {
+      userData.stats = {
+        cardsStudied: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0
+      };
+    }
+    
+    // Mettre à jour les statistiques
+    userData.stats.cardsStudied = (userData.stats.cardsStudied || 0) + 1;
+    
+    if (correct) {
+      userData.stats.correctAnswers = (userData.stats.correctAnswers || 0) + 1;
+    } else {
+      userData.stats.incorrectAnswers = (userData.stats.incorrectAnswers || 0) + 1;
+    }
+    
+    // Sauvegarder les modifications
+    await IndexedDB.saveData(USER_DATA_KEY, userData);
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'étude:", error);
+  }
+};
+
+export const updateSessionStats = async (stats: Partial<{ 
+  studySessions: number;
+  totalStudyTime: number;
+  lastStudyDate: string;
+}>): Promise<void> => {
+  try {
+    const userData = await IndexedDB.loadData(USER_DATA_KEY, {
+      stats: {
+        studySessions: 0,
+        totalStudyTime: 0,
+        lastStudyDate: new Date().toISOString()
+      }
+    });
+    
+    // S'assurer que les stats existent
+    if (!userData.stats) {
+      userData.stats = {
+        studySessions: 0,
+        totalStudyTime: 0,
+        lastStudyDate: new Date().toISOString()
+      };
+    }
+    
+    // Mettre à jour les statistiques
+    if (stats.studySessions) {
+      userData.stats.studySessions = (userData.stats.studySessions || 0) + stats.studySessions;
+    }
+    
+    if (stats.totalStudyTime) {
+      userData.stats.totalStudyTime = (userData.stats.totalStudyTime || 0) + stats.totalStudyTime;
+    }
+    
+    if (stats.lastStudyDate) {
+      userData.stats.lastStudyDate = stats.lastStudyDate;
+    }
+    
+    // Sauvegarder les modifications
+    await IndexedDB.saveData(USER_DATA_KEY, userData);
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des statistiques de session:", error);
+  }
+};

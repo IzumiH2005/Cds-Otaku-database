@@ -12,11 +12,33 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import FlashCard from "@/components/FlashCard";
-import { getDeckSync as getDeck, getFlashcardsByDeckSync as getFlashcardsByDeck, Flashcard, getThemesByDeckSync as getThemesByDeck } from "@/lib/localStorage";
-import { recordCardStudySync as recordCardStudy, updateSessionStatsSync as updateSessionStats } from "@/lib/sessionManager";
+import { getDeck, getFlashcardsByDeck, Flashcard as DbFlashcard, getThemesByDeck } from "@/lib/localStorage";
+import { recordCardStudy, updateSessionStats } from "@/lib/sessionManager";
 import * as enhancedDB from "@/lib/enhancedIndexedDB";
 import { ArrowLeft, ArrowRight, Check, X, Shuffle, ThumbsUp, ThumbsDown, Lightbulb, MessageSquare, Repeat } from "lucide-react";
 import { evaluateAnswer } from "@/services/geminiService";
+
+// Interface pour les cartes transformées
+interface Flashcard {
+  id: string;
+  deckId: string;
+  themeId?: string;
+  front: {
+    text: string;
+    image?: string;
+    audio?: string;
+    additionalInfo?: string;
+  };
+  back: {
+    text: string;
+    image?: string;
+    audio?: string;
+    additionalInfo?: string;
+  };
+  hints?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 enum StudyMode {
   FLASHCARDS = "flashcards",
@@ -52,6 +74,7 @@ const StudyPage = () => {
   const [showResults, setShowResults] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
   const [isGeminiEnabled, setIsGeminiEnabled] = useState<boolean>(false);
+  const [isRecordingSession, setIsRecordingSession] = useState<boolean>(false);
   
   // Charger la clé API Gemini depuis IndexedDB
   useEffect(() => {
@@ -79,7 +102,7 @@ const StudyPage = () => {
 
     const loadDeckData = async () => {
       try {
-        const deckData = getDeck(id);
+        const deckData = await getDeck(id);
         if (!deckData) {
           toast({
             title: "Deck introuvable",
@@ -91,15 +114,33 @@ const StudyPage = () => {
         }
         setDeck(deckData);
 
-        const deckCards = getFlashcardsByDeck(id);
-        setCards(deckCards);
+        const deckCards = await getFlashcardsByDeck(id);
+        
+        // Transformation des cartes pour correspondre au format attendu par FlashCard
+        const transformedCards = deckCards.map(card => ({
+          ...card,
+          front: {
+            text: card.front,
+            image: card.frontImage,
+            audio: card.frontAudio,
+            additionalInfo: card.additionalInfo
+          },
+          back: {
+            text: card.back,
+            image: card.backImage,
+            audio: card.backAudio,
+            additionalInfo: card.additionalInfo
+          }
+        }));
+        
+        setCards(transformedCards);
 
-        const deckThemes = getThemesByDeck(id);
+        const deckThemes = await getThemesByDeck(id);
         setThemes(deckThemes);
 
-        setFilteredCards(shuffle ? shuffleArray([...deckCards]) : [...deckCards]);
+        setFilteredCards(shuffle ? shuffleArray([...transformedCards]) : [...transformedCards]);
 
-        updateSessionStats({
+        await updateSessionStats({
           studySessions: 1,
           lastStudyDate: new Date().toISOString(),
         });
@@ -150,7 +191,7 @@ const StudyPage = () => {
     return newArray;
   };
 
-  const handleNextCard = () => {
+  const handleNextCard = async () => {
     if (currentCardIndex < filteredCards.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
       setIsFlipped(false);
@@ -158,7 +199,7 @@ const StudyPage = () => {
       setShowHint(false);
     } else {
       if (studyMode === StudyMode.FLASHCARDS) {
-        recordStudySession();
+        await recordStudySession();
         toast({
           title: "Bravo !",
           description: "Vous avez terminé toutes les cartes de ce deck.",
@@ -176,10 +217,10 @@ const StudyPage = () => {
     }
   };
 
-  const handleCardFlip = () => {
+  const handleCardFlip = async () => {
     setIsFlipped(!isFlipped);
     if (!isFlipped) {
-      recordCardStudy(true);
+      await recordCardStudy(true);
     }
   };
 
@@ -236,7 +277,7 @@ const StudyPage = () => {
       
       if (isCorrect) {
         setCorrectAnswers(prev => prev + 1);
-        recordCardStudy(true);
+        await recordCardStudy(true);
         toast({
           title: "Correct!",
           description: feedback,
@@ -244,7 +285,7 @@ const StudyPage = () => {
         });
       } else {
         setIncorrectAnswers(prev => prev + 1);
-        recordCardStudy(false);
+        await recordCardStudy(false);
         toast({
           title: "Incorrect",
           description: feedback,
@@ -266,7 +307,7 @@ const StudyPage = () => {
     }
   };
 
-  const handleManualCheck = (cardId: string, isCorrect: boolean) => {
+  const handleManualCheck = async (cardId: string, isCorrect: boolean) => {
     setQuizResults({
       ...quizResults,
       [cardId]: isCorrect
@@ -274,10 +315,10 @@ const StudyPage = () => {
     
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
-      recordCardStudy(true);
+      await recordCardStudy(true);
     } else {
       setIncorrectAnswers(prev => prev + 1);
-      recordCardStudy(false);
+      await recordCardStudy(false);
     }
     
     if (currentCardIndex < filteredCards.length - 1) {
@@ -288,7 +329,7 @@ const StudyPage = () => {
         }
       }, 1000);
     } else {
-      recordStudySession();
+      await recordStudySession();
       setShowResults(true);
     }
   };
@@ -317,7 +358,7 @@ const StudyPage = () => {
           }
         }, 1000);
       } else if (result !== null && currentCardIndex === filteredCards.length - 1) {
-        recordStudySession();
+        await recordStudySession();
         setShowResults(true);
       }
     } else {
@@ -326,12 +367,13 @@ const StudyPage = () => {
     }
   };
 
-  const recordStudySession = () => {
+  const recordStudySession = async () => {
     try {
+      setIsRecordingSession(true);
       const endTime = new Date();
       const durationMinutes = Math.round((endTime.getTime() - studyStartTime.getTime()) / (1000 * 60));
       
-      updateSessionStats({
+      await updateSessionStats({
         totalStudyTime: durationMinutes,
         lastStudyDate: new Date().toISOString(),
       });
@@ -339,6 +381,8 @@ const StudyPage = () => {
       console.log(`Study session recorded: ${durationMinutes} minutes`);
     } catch (error) {
       console.error("Error recording study session:", error);
+    } finally {
+      setIsRecordingSession(false);
     }
   };
 
@@ -851,10 +895,19 @@ const StudyPage = () => {
             
             <Button
               onClick={handleNextCard}
-              disabled={currentCardIndex === filteredCards.length - 1}
+              disabled={currentCardIndex === filteredCards.length - 1 || isRecordingSession}
             >
-              Suivant
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isRecordingSession ? (
+                <>
+                  Enregistrement...
+                  <span className="ml-2 animate-spin">⏳</span>
+                </>
+              ) : (
+                <>
+                  Suivant
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         )}

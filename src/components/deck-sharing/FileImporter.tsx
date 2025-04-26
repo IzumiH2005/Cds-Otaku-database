@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileUp, RefreshCcw } from "lucide-react";
-import { importDeckFromJson, updateDeckFromJson, getUser } from "@/lib/storageCompatLayer";
+import { importDeckFromJson, updateDeckFromJson, getUser } from "@/lib/localStorage";
 import type { SharedDeckExport } from "@/lib/localStorage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,18 +53,23 @@ const FileImporter = ({ onClose }: FileImporterProps) => {
   };
 
   const handleImport = async () => {
-    const user = getUser();
-    if (!user) {
-      setImportError("Utilisateur non connecté");
-      return;
-    }
-    
-    const deckData = validateDeckJson(jsonContent);
-    if (!deckData) return;
-    
     try {
+      const user = await getUser();
+      if (!user) {
+        setImportError("Utilisateur non connecté");
+        return;
+      }
+      
+      const deckData = validateDeckJson(jsonContent);
+      if (!deckData) return;
+      
       setIsImporting(true);
-      const newDeckId = importDeckFromJson(deckData, user.id);
+      // Assurons-nous que user n'est pas un Promise en vérifiant encore
+      if (typeof user === 'object' && user && 'id' in user) {
+        const newDeckId = await importDeckFromJson(deckData, user.id);
+      } else {
+        throw new Error("Utilisateur invalide");
+      }
       
       toast({
         title: "Deck importé avec succès",
@@ -81,12 +86,12 @@ const FileImporter = ({ onClose }: FileImporterProps) => {
   };
 
   const handleUpdate = async () => {
-    const deckData = validateDeckJson(jsonContent);
-    if (!deckData) return;
-    
     try {
+      const deckData = validateDeckJson(jsonContent);
+      if (!deckData) return;
+      
       setIsUpdating(true);
-      const success = updateDeckFromJson(deckData);
+      const success = await updateDeckFromJson(deckData);
       
       if (success) {
         toast({

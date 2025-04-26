@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Download } from "lucide-react";
-import { exportDeckToJson, getDecks } from "@/lib/storageCompatLayer";
+import { exportDeckToJson, getDecks } from "@/lib/localStorage";
 import { useToast } from "@/hooks/use-toast";
 
 interface DeckExporterProps {
@@ -16,8 +16,30 @@ interface DeckExporterProps {
 const DeckExporter = ({ selectedDeck, onDeckSelect }: DeckExporterProps) => {
   const [jsonContent, setJsonContent] = useState<string>("");
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [decks, setDecks] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
-  const decks = getDecks().filter(deck => deck.isPublic !== true);
+  
+  // Chargement asynchrone des decks
+  useEffect(() => {
+    async function loadDecks() {
+      try {
+        const allDecks = await getDecks();
+        setDecks(allDecks.filter(deck => deck.isPublic !== true));
+      } catch (error) {
+        console.error("Erreur lors du chargement des decks:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les decks",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadDecks();
+  }, [toast]);
   
   const handleExport = async () => {
     if (!selectedDeck) {
@@ -31,7 +53,7 @@ const DeckExporter = ({ selectedDeck, onDeckSelect }: DeckExporterProps) => {
     
     try {
       setIsExporting(true);
-      const exportedDeck = exportDeckToJson(selectedDeck);
+      const exportedDeck = await exportDeckToJson(selectedDeck);
       const jsonString = JSON.stringify(exportedDeck, null, 2);
       setJsonContent(jsonString);
       

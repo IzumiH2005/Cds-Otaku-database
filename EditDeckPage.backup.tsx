@@ -231,14 +231,9 @@ const EditDeckPage = () => {
           description: "Votre deck est maintenant visible dans l'explorateur",
         });
         
-        try {
-          const updatedDeckResult = await getDeck(id || '');
-          if (updatedDeckResult) {
-            // Utiliser updatedDeckResult au lieu de updatedDeck pour éviter les problèmes
-            setDeck(updatedDeckResult);
-          }
-        } catch (error) {
-          console.error("Erreur lors de la récupération du deck mis à jour:", error);
+        const updatedDeck = await getDeck(id || '');
+        if (updatedDeck) {
+          setDeck(updatedDeck);
         }
       } else {
         setPublishError("Impossible de publier le deck. Veuillez réessayer.");
@@ -273,14 +268,9 @@ const EditDeckPage = () => {
           description: "Votre deck n'est plus visible dans l'explorateur",
         });
         
-        try {
-          const updatedDeckResult = await getDeck(id || '');
-          if (updatedDeckResult) {
-            // Utiliser updatedDeckResult au lieu de updatedDeck pour éviter les problèmes
-            setDeck(updatedDeckResult);
-          }
-        } catch (error) {
-          console.error("Erreur lors de la récupération du deck mis à jour:", error);
+        const updatedDeck = await getDeck(id || '');
+        if (updatedDeck) {
+          setDeck(updatedDeck);
         }
       } else {
         toast({
