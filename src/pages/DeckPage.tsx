@@ -31,14 +31,14 @@ import ThemeCard from "@/components/ThemeCard";
 import FlashCardItem from "@/components/FlashCardItem";
 
 import { 
-  getDeck, 
-  getThemesByDeck, 
-  getFlashcardsByDeck, 
-  getUser, 
-  createTheme, 
-  createFlashcard, 
-  getBase64, 
-  createShareCode,
+  getDeckSync as getDeck, 
+  getThemesByDeckSync as getThemesByDeck, 
+  getFlashcardsByDeckSync as getFlashcardsByDeck, 
+  getUserSync as getUser, 
+  createThemeSync as createTheme, 
+  createFlashcardSync as createFlashcard, 
+  getBase64Sync as getBase64, 
+  createShareCodeSync as createShareCode,
   Theme,
   Flashcard
 } from "@/lib/localStorage";
@@ -132,7 +132,7 @@ const DeckPage = () => {
     setFlashcards(deckCards);
   };
   
-  const handleThemeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThemeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -146,7 +146,7 @@ const DeckPage = () => {
         return;
       }
       
-      const base64 = await getBase64(file);
+      const base64 = getBase64(file);
       setNewTheme({ ...newTheme, coverImage: base64 });
     } catch (error) {
       console.error("Error processing image:", error);
@@ -158,7 +158,7 @@ const DeckPage = () => {
     }
   };
   
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -172,7 +172,7 @@ const DeckPage = () => {
         return;
       }
       
-      const base64 = await getBase64(file);
+      const base64 = getBase64(file);
       
       if (side === 'front') {
         setNewCard({
@@ -195,7 +195,7 @@ const DeckPage = () => {
     }
   };
   
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -218,7 +218,7 @@ const DeckPage = () => {
         return;
       }
       
-      const base64 = await getBase64(file);
+      const base64 = getBase64(file);
       
       if (side === 'front') {
         setNewCard({

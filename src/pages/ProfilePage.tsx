@@ -16,18 +16,18 @@ import { Loader2, Save, Download, Upload, Clock, Award, Calendar, BarChart2, Zap
 const ProfilePage = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(getUser() || initializeDefaultUser());
+  const [user, setUser] = useState<any>({});
   const [sessionKey, setSessionKey] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editName, setEditName] = useState(user?.name || "");
-  const [editBio, setEditBio] = useState(user?.bio || "");
-  const [editAvatar, setEditAvatar] = useState<string | undefined>(user?.avatar);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editAvatar, setEditAvatar] = useState<string | undefined>();
   const [exportFile, setExportFile] = useState<string | null>(null);
   const [importData, setImportData] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSessionData = () => {
+    const fetchSessionData = async () => {
       try {
         // Get session key
         const key = getSessionKey();
@@ -38,7 +38,11 @@ const ProfilePage = () => {
         setStats(userStats);
 
         // Make sure we have a user
-        const userData = getUser() || initializeDefaultUser();
+        let userData = await getUser();
+        if (!userData) {
+          userData = await initializeDefaultUser();
+        }
+        
         setUser(userData);
         setEditName(userData.name);
         setEditBio(userData.bio || "");
@@ -59,9 +63,9 @@ const ProfilePage = () => {
     fetchSessionData();
   }, [toast]);
 
-  const handleUpdateProfile = () => {
+  const handleUpdateProfile = async () => {
     try {
-      const updatedUser = updateUser({
+      const updatedUser = await updateUser({
         name: editName,
         bio: editBio,
         avatar: editAvatar,

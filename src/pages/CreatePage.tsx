@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { createDeck, getBase64, getUser } from "@/lib/localStorage";
+import { createDeckSync as createDeck, getBase64Sync as getBase64, getUserSync as getUser } from "@/lib/localStorage";
 
 const CreatePage = () => {
   const { toast } = useToast();
@@ -94,7 +94,7 @@ const CreatePage = () => {
     }
   };
 
-  const handleCreateDeck = () => {
+  const handleCreateDeck = async () => {
     if (!title.trim()) {
       toast({
         title: "Titre requis",
@@ -105,9 +105,10 @@ const CreatePage = () => {
     }
 
     try {
-      const userId = getUser()?.id || "anonymous";
+      const user = await getUser();
+      const userId = user?.id || "anonymous";
 
-      const newDeck = createDeck({
+      const newDeck = await createDeck({
         title: title.trim(),
         description: description.trim(),
         coverImage,

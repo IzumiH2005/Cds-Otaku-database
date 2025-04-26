@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Clipboard, Share2, Check, Copy, QrCode, Link2, Send, Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getDecks, createShareCode, Deck } from "@/lib/localStorage";
+import { getDecksSync as getDecks, createShareCodeSync as createShareCode, Deck } from "@/lib/localStorage";
 import { exportSessionData, getSessionKey } from "@/lib/sessionManager";
 
 const SharePage = () => {
@@ -24,7 +24,7 @@ const SharePage = () => {
   
   const decks = getDecks();
 
-  const generateShareCode = () => {
+  const generateShareCode = async () => {
     if (!selectedDeck) {
       toast({
         title: "Sélection requise",
@@ -36,7 +36,7 @@ const SharePage = () => {
     
     try {
       const days = parseInt(expiryDays, 10);
-      const code = createShareCode(selectedDeck, days);
+      const code = await createShareCode(selectedDeck, days);
       const url = `${window.location.origin}/import/${code}`;
       
       setShareCode(code);
@@ -56,7 +56,7 @@ const SharePage = () => {
     }
   };
   
-  const generateExportData = () => {
+  const generateExportData = async () => {
     const sessionKey = getSessionKey();
     if (!sessionKey) {
       toast({
@@ -73,7 +73,9 @@ const SharePage = () => {
         throw new Error("Aucune donnée à exporter");
       }
       
-      setExportData(data);
+      // Convertir en chaîne si ce n'est pas déjà le cas
+      const exportDataStr = JSON.stringify(data);
+      setExportData(exportDataStr);
       
       toast({
         title: "Données exportées",

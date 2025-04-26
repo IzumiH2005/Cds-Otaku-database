@@ -5,7 +5,7 @@ import { ChevronRightIcon, Globe, Plus, TrendingUp, BookOpen, ArrowRight } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import DeckCard, { DeckCardProps } from "@/components/DeckCard";
-import { getDecks, getUser, User } from "@/lib/localStorage";
+import { getDecksSync as getDecks, getUserSync as getUser, User } from "@/lib/localStorage";
 
 const HomePage = () => {
   const [recentDecks, setRecentDecks] = useState<DeckCardProps[]>([]);

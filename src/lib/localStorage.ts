@@ -843,3 +843,47 @@ export const deleteThemeSync = (id: string): boolean => {
   deleteTheme(id).then(success => { result = success; });
   return result;
 };
+
+// Les fonctions synchrones suivantes existent déjà plus haut dans le fichier
+
+export const createThemeSync = (themeData: Omit<Theme, "id" | "createdAt" | "updatedAt">): Theme => {
+  let result: Theme | null = null;
+  createTheme(themeData).then(theme => { result = theme; });
+  return result as Theme;
+};
+
+export const createFlashcardSync = (cardData: Omit<Flashcard, "id" | "createdAt" | "updatedAt">): Flashcard => {
+  let result: Flashcard | null = null;
+  createFlashcard(cardData).then(card => { result = card; });
+  return result as Flashcard;
+};
+
+export const createShareCodeSync = (deckId: string, days: number = 30): string => {
+  let result: string = "";
+  createShareCode(deckId, days).then(code => { result = code; });
+  return result;
+}
+
+export const createDeckSync = (deckData: Omit<Deck, "id" | "createdAt" | "updatedAt">): Deck => {
+  let result: Deck | null = null;
+  createDeck(deckData).then(deck => { result = deck; });
+  return result as Deck;
+}
+
+export const getSharedImportedDecksSync = (): { originalId: string; localDeckId: string; }[] => {
+  let result: { originalId: string; localDeckId: string; }[] = [];
+  getSharedImportedDecks().then(sharedDecks => { result = sharedDecks; });
+  return result;
+}
+
+export const initializeDefaultUserSync = (): User => {
+  let result: User | null = null;
+  initializeDefaultUser().then(user => { result = user; });
+  return result as User;
+}
+
+export const updateUserSync = (userData: Partial<User>): User | null => {
+  let result: User | null = null;
+  updateUser(userData).then(user => { result = user; });
+  return result;
+}

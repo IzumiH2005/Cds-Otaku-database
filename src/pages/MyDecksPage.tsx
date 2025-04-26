@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getDecks, type Deck } from '@/lib/localStorage';
-import { getUser } from '@/lib/localStorage';
+import { getDecksSync as getDecks, type Deck } from '@/lib/localStorage';
+import { getUserSync as getUser } from '@/lib/localStorage';
 import DeckCard from '@/components/DeckCard';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
