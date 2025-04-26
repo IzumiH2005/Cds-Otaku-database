@@ -1,257 +1,155 @@
-import React, { useState, useEffect } from 'react';
-import * as storage from '@/lib/localStorage';
-import * as compatStorage from '@/lib/storageCompatLayer';
-import * as enhancedDB from '@/lib/enhancedIndexedDB';
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import * as indexedDB from "@/lib/enhancedIndexedDB";
 
-// Interface pour l'état de la page
-interface TestState {
-  isDbInitialized: boolean;
-  userCount: number;
-  decksCount: number;
-  themesCount: number;
-  flashcardsCount: number;
-  testResults: { name: string; status: 'success' | 'error'; message: string }[];
-}
+const TestIndexedDBPage = () => {
+  const [status, setStatus] = useState<string>("Initialisation...");
+  const [savedData, setSavedData] = useState<string>("{}");
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
-const TestIndexedDBPage: React.FC = () => {
-  const [state, setState] = useState<TestState>({
-    isDbInitialized: false,
-    userCount: 0,
-    decksCount: 0,
-    themesCount: 0,
-    flashcardsCount: 0,
-    testResults: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fonction d'ajout des résultats de test
-  const addTestResult = (name: string, status: 'success' | 'error', message: string) => {
-    setState(prev => ({
-      ...prev,
-      testResults: [...prev.testResults, { name, status, message }],
-    }));
-  };
-
-  // Fonction pour exécuter un test
-  const runTest = async (name: string, testFn: () => Promise<string>) => {
-    try {
-      const message = await testFn();
-      addTestResult(name, 'success', message);
-    } catch (error) {
-      addTestResult(name, 'error', error instanceof Error ? error.message : 'Unknown error');
-    }
-  };
-
-  // Tests
-  const runAllTests = async () => {
-    setIsLoading(true);
-    setError(null);
-    setState(prev => ({ ...prev, testResults: [] }));
-
-    try {
-      // Test d'initialisation de la base
-      await runTest('Initialisation DB', async () => {
-        const keys = await enhancedDB.getAllKeys();
-        return `DB initialisée avec ${keys.length} clés`;
-      });
-
-      // Test de création d'utilisateur
-      await runTest('Création utilisateur', async () => {
-        const user = await storage.getUser();
-        if (user) {
-          return `Utilisateur existant: ${user.name}`;
-        }
-
-        const newUser = await storage.setUser({
-          id: 'user_test_' + Date.now(),
-          name: 'Utilisateur Test',
-          email: 'test@example.com',
-          createdAt: new Date().toISOString(),
-        });
-
-        const createdUser = await storage.getUser();
-        if (!createdUser) throw new Error('Utilisateur non créé');
-        
-        return `Utilisateur créé: ${createdUser.name}`;
-      });
-
-      // Test de création de deck
-      await runTest('Création deck', async () => {
-        const user = await storage.getUser();
-        if (!user) throw new Error('Pas d\'utilisateur pour créer un deck');
-
-        const deck = await storage.createDeck({
-          title: 'Test Deck IndexedDB',
-          description: 'Deck de test pour IndexedDB',
-          authorId: user.id,
-          isPublic: false,
-          tags: ['test', 'indexeddb'],
-        });
-
-        return `Deck créé: ${deck.title}`;
-      });
-
-      // Test de récupération des decks
-      await runTest('Récupération decks', async () => {
-        const decks = await storage.getDecks();
-        return `${decks.length} decks récupérés`;
-      });
-
-      // Test de création de thème
-      await runTest('Création thème', async () => {
-        const decks = await storage.getDecks();
-        if (decks.length === 0) throw new Error('Pas de deck pour créer un thème');
-
-        const theme = await storage.createTheme({
-          deckId: decks[0].id,
-          title: 'Test Theme IndexedDB',
-          description: 'Thème de test pour IndexedDB',
-        });
-
-        return `Thème créé: ${theme.title}`;
-      });
-
-      // Test de récupération des thèmes
-      await runTest('Récupération thèmes', async () => {
-        const themes = await storage.getThemes();
-        return `${themes.length} thèmes récupérés`;
-      });
-
-      // Test de création de flashcard
-      await runTest('Création flashcard', async () => {
-        const decks = await storage.getDecks();
-        if (decks.length === 0) throw new Error('Pas de deck pour créer une flashcard');
-
-        const themes = await storage.getThemesByDeck(decks[0].id);
-
-        const flashcard = await storage.createFlashcard({
-          deckId: decks[0].id,
-          themeId: themes.length > 0 ? themes[0].id : undefined,
-          front: {
-            text: 'Question de test IndexedDB',
-          },
-          back: {
-            text: 'Réponse de test IndexedDB',
-          },
-        });
-
-        return `Flashcard créée: ${flashcard.front.text}`;
-      });
-
-      // Test de récupération des flashcards
-      await runTest('Récupération flashcards', async () => {
-        const flashcards = await storage.getFlashcards();
-        return `${flashcards.length} flashcards récupérées`;
-      });
-
-      // Test de la couche de compatibilité
-      await runTest('Test couche compatibilité', async () => {
-        // Exécuter des appels synchrones et attendre un peu pour qu'ils se terminent
-        const decksSync = compatStorage.getDecks();
-        
-        // Attendre un peu pour que les opérations asynchrones en arrière-plan se terminent
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Maintenant, récupérer les données de manière asynchrone pour comparer
-        const decksAsync = await storage.getDecks();
-        
-        return `Couche de compatibilité: ${decksSync.length} decks en synchrone, ${decksAsync.length} decks en asynchrone`;
-      });
-
-      // Récupérer les compteurs finaux pour affichage
-      const user = await storage.getUser();
-      const decks = await storage.getDecks();
-      const themes = await storage.getThemes();
-      const flashcards = await storage.getFlashcards();
-
-      setState(prev => ({
-        ...prev,
-        isDbInitialized: true,
-        userCount: user ? 1 : 0,
-        decksCount: decks.length,
-        themesCount: themes.length,
-        flashcardsCount: flashcards.length,
-      }));
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur inconnue est survenue');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Exécuter les tests au chargement de la page
   useEffect(() => {
-    runAllTests();
+    const testIndexedDB = async () => {
+      try {
+        setStatus("Initialisation d'IndexedDB...");
+        
+        // Sauvegarder des données
+        await indexedDB.saveData("test-key", { message: "Bonjour depuis IndexedDB!", timestamp: new Date().toISOString() });
+        setStatus("Données sauvegardées avec succès.");
+        
+        // Charger des données
+        const data = await indexedDB.loadData("test-key", {});
+        setSavedData(JSON.stringify(data, null, 2));
+        setDataLoaded(true);
+        
+        setStatus("Test réussi: IndexedDB fonctionne correctement.");
+      } catch (error) {
+        console.error("Erreur de test IndexedDB:", error);
+        setStatus(`Erreur: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    };
+    
+    testIndexedDB();
   }, []);
-
+  
+  const handleRunAdditionalTest = async () => {
+    try {
+      setStatus("Exécution de tests supplémentaires...");
+      
+      // Ajouter un élément à un tableau
+      await indexedDB.addItem("test-array", { id: Date.now().toString(), value: "Nouvel élément" }, []);
+      
+      // Charger le tableau
+      const arrayData = await indexedDB.loadData("test-array", []);
+      
+      // Mettre à jour l'affichage
+      setStatus("Tests supplémentaires réussis.");
+      setSavedData(JSON.stringify(arrayData, null, 2));
+    } catch (error) {
+      console.error("Erreur lors des tests supplémentaires:", error);
+      setStatus(`Erreur: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  
+  const handleClearData = async () => {
+    try {
+      setStatus("Suppression des données de test...");
+      
+      // Supprimer les données de test
+      await indexedDB.removeData("test-key");
+      await indexedDB.removeData("test-array");
+      
+      // Mise à jour de l'affichage
+      setSavedData("{}");
+      setStatus("Données supprimées avec succès.");
+    } catch (error) {
+      console.error("Erreur lors de la suppression des données:", error);
+      setStatus(`Erreur: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Test Migration IndexedDB</h1>
-
-      {isLoading ? (
-        <div className="p-4 border rounded bg-blue-50 mb-4">
-          <p className="text-blue-700">Chargement et exécution des tests...</p>
-        </div>
-      ) : error ? (
-        <div className="p-4 border rounded bg-red-50 mb-4">
-          <p className="text-red-700">Erreur: {error}</p>
-        </div>
-      ) : (
-        <div className="p-4 border rounded bg-green-50 mb-4">
-          <p className="text-green-700">
-            Tests terminés! IndexedDB {state.isDbInitialized ? 'initialisé' : 'non initialisé'}
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 border rounded bg-gray-50">
-          <p className="text-sm text-gray-500">Utilisateurs</p>
-          <p className="text-xl font-semibold">{state.userCount}</p>
-        </div>
-        <div className="p-4 border rounded bg-gray-50">
-          <p className="text-sm text-gray-500">Decks</p>
-          <p className="text-xl font-semibold">{state.decksCount}</p>
-        </div>
-        <div className="p-4 border rounded bg-gray-50">
-          <p className="text-sm text-gray-500">Thèmes</p>
-          <p className="text-xl font-semibold">{state.themesCount}</p>
-        </div>
-        <div className="p-4 border rounded bg-gray-50">
-          <p className="text-sm text-gray-500">Flashcards</p>
-          <p className="text-xl font-semibold">{state.flashcardsCount}</p>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <h2 className="text-xl font-bold mb-2">Résultats des tests</h2>
-        <div className="border rounded overflow-hidden">
-          {state.testResults.map((result, index) => (
-            <div
-              key={index}
-              className={`p-3 border-b ${
-                result.status === 'success' ? 'bg-green-50' : 'bg-red-50'
-              }`}
-            >
-              <p className="font-semibold">
-                {result.status === 'success' ? '✅' : '❌'} {result.name}
-              </p>
-              <p className="text-sm">{result.message}</p>
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        Test d'IndexedDB
+      </h1>
+      
+      <div className="grid gap-8">
+        <Card className="shadow-md border-indigo-100 dark:border-indigo-900/30">
+          <CardHeader className="bg-gradient-to-r from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-t-lg">
+            <CardTitle>Statut du Test</CardTitle>
+            <CardDescription>État actuel de l'exécution du test IndexedDB</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className={`p-4 rounded-md ${
+              status.includes("réussi") 
+                ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" 
+                : status.includes("Erreur") 
+                  ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"
+                  : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            }`}>
+              <p>{status}</p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-center">
-        <button
-          onClick={runAllTests}
-          disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isLoading ? 'Exécution...' : 'Relancer les tests'}
-        </button>
+          </CardContent>
+          <CardFooter className="flex flex-wrap gap-2 justify-end bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-b-lg">
+            <Button 
+              onClick={handleRunAdditionalTest}
+              className="bg-indigo-500 hover:bg-indigo-600"
+            >
+              Exécuter Test Supplémentaire
+            </Button>
+            <Button 
+              onClick={handleClearData}
+              variant="outline"
+            >
+              Effacer Données de Test
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        {dataLoaded && (
+          <Card className="shadow-md border-indigo-100 dark:border-indigo-900/30">
+            <CardHeader className="bg-gradient-to-r from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-t-lg">
+              <CardTitle>Données Enregistrées</CardTitle>
+              <CardDescription>Contenu récupéré depuis IndexedDB</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-auto max-h-60 text-sm">
+                {savedData}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+        
+        <Card className="shadow-md border-indigo-100 dark:border-indigo-900/30">
+          <CardHeader className="bg-gradient-to-r from-indigo-100/50 to-purple-100/50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-t-lg">
+            <CardTitle>Documentation</CardTitle>
+            <CardDescription>Informations sur l'utilisation d'IndexedDB</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-2">Fonctions Principales</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><code className="text-indigo-600 dark:text-indigo-400">saveData(key, data)</code> - Enregistre des données</li>
+                <li><code className="text-indigo-600 dark:text-indigo-400">loadData(key, defaultValue)</code> - Charge des données</li>
+                <li><code className="text-indigo-600 dark:text-indigo-400">addItem(key, item, defaultValue)</code> - Ajoute un élément à un tableau</li>
+                <li><code className="text-indigo-600 dark:text-indigo-400">updateItem(key, id, updateFn, idField, defaultValue)</code> - Met à jour un élément dans un tableau</li>
+                <li><code className="text-indigo-600 dark:text-indigo-400">removeArrayItem(key, id, idField, defaultValue)</code> - Supprime un élément d'un tableau</li>
+                <li><code className="text-indigo-600 dark:text-indigo-400">removeData(key)</code> - Supprime une clé et ses données</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-lg mb-2">Avantages par rapport à localStorage</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Plus grande capacité de stockage (pas limité à 5-10MB)</li>
+                <li>Support de structures de données complexes sans nécessiter de stringification</li>
+                <li>Opérations asynchrones qui n'impactent pas le thread principal</li>
+                <li>Meilleures performances sur de grandes quantités de données</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

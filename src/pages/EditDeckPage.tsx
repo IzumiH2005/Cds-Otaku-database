@@ -34,7 +34,7 @@ import {
   getUser
 } from "@/lib/storageCompatLayer";
 
-import type { Deck } from "@/lib/localStorage";
+import type { Deck } from "@/lib/storageCompatLayer";
 import { publishDeck, unpublishDeck, updatePublishedDeck } from "@/lib/storageCompatLayer";
 
 const EditDeckPage = () => {

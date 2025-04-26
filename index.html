@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,10 +10,158 @@
     <meta property="og:title" content="CDS FLASHCARD BASE" />
     <meta property="og:description" content="Une application de cartes mémoire complète pour l'apprentissage efficace" />
     <meta property="og:type" content="website" />
+    
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        background: linear-gradient(135deg, #f5f7ff 0%, #f0e4ff 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .fallback-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: none;
+      }
+      
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(to right, #6366f1, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      p {
+        color: #4b5563;
+        font-size: 1.1rem;
+      }
+      
+      .card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      .feature-list {
+        list-style-type: none;
+        padding: 0;
+      }
+      
+      .feature-list li {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+      }
+      
+      .feature-list li:before {
+        content: "✓";
+        color: #6366f1;
+        margin-right: 0.5rem;
+        font-weight: bold;
+      }
+      
+      button {
+        background: linear-gradient(to right, #6366f1, #8b5cf6);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-block;
+      }
+      
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+      
+      .error-message {
+        background: #fee2e2;
+        color: #b91c1c;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+      
+      /* Script de fallback si l'app ne se charge pas */
+      window.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          if (!window.appLoaded) {
+            document.getElementById('fallbackContent').style.display = 'block';
+          }
+        }, 5000);
+      });
+    </style>
   </head>
 
   <body>
     <div id="root"></div>
+    <div id="fallbackContent" class="fallback-container">
+      <div class="header">
+        <h1>FlashCard Base</h1>
+        <p>Une application complète pour améliorer votre apprentissage avec des cartes mémoire interactives</p>
+      </div>
+      
+      <div class="card">
+        <h2>Fonctionnalités</h2>
+        <ul class="feature-list">
+          <li>Création de decks et cartes personnalisées</li>
+          <li>Organisation par thèmes et catégories</li>
+          <li>Mode d'étude interactif avec suivi de progression</li>
+          <li>Partage de decks entre utilisateurs</li>
+          <li>Synchronisation de vos données entre appareils</li>
+          <li>Interface intuitive et adaptée à tous les écrans</li>
+        </ul>
+      </div>
+      
+      <div id="errorMessage" class="error-message">
+        <p>L'application rencontre actuellement des difficultés de chargement. Nous travaillons à résoudre ce problème.</p>
+      </div>
+      
+      <button onclick="window.location.reload()">Rafraîchir l'application</button>
+    </div>
+    
+    <script>
+      // Marquer l'application comme chargée quand elle est correctement initialisée
+      window.appLoaded = false;
+      
+      // Gérer les erreurs globales
+      window.addEventListener('error', function(event) {
+        console.error('Erreur globale interceptée:', event.error);
+        document.getElementById('errorMessage').style.display = 'block';
+      });
+      
+      // Marquer l'application comme chargée quand React est initialisé
+      window.markAppAsLoaded = function() {
+        window.appLoaded = true;
+      };
+      
+      // Vérifier si l'application est chargée après 5 secondes
+      setTimeout(function() {
+        if (!window.appLoaded) {
+          document.getElementById('fallbackContent').style.display = 'block';
+        }
+      }, 5000);
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
