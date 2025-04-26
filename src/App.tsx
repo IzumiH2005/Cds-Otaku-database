@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { generateSampleDataSync as generateSampleData } from "./lib/storageCompatLayer";
-import { hasSessionSync as hasSession } from "./lib/storageCompatLayer";
+import { generateSampleDataSync as generateSampleData } from "./lib/localStorage";
+import { hasSessionSync as hasSession } from "./lib/sessionManager";
 
 // Components
 import Navbar from "@/components/Navbar";
