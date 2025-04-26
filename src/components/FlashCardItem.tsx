@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, Save, X } from "lucide-react";
-import { updateFlashcard, deleteFlashcard } from "@/lib/storageAdapter";
-import { getBase64, Flashcard } from "@/lib/localStorage";
+import { updateFlashcard, deleteFlashcard, Flashcard } from "@/lib/storageAdapter";
+import { getBase64 } from "@/lib/utils";
 import FlashCard from "./FlashCard";
 
 interface FlashCardItemProps {
@@ -141,6 +141,18 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
 
     try {
+      console.log("------- Mise à jour dans FlashCardItem -------");
+      console.log("Audio front présent:", editingCard.front.audio ? "Oui" : "Non");
+      console.log("Audio back présent:", editingCard.back.audio ? "Oui" : "Non");
+      
+      // Log de la taille des données audio si présentes
+      if (editingCard.front.audio) {
+        console.log("Taille audio front (dans Item):", Math.round(editingCard.front.audio.length / 1024), "Ko");
+      }
+      if (editingCard.back.audio) {
+        console.log("Taille audio back (dans Item):", Math.round(editingCard.back.audio.length / 1024), "Ko");
+      }
+      
       const updatedFront = {
         text: editingCard.front.text.trim(),
         image: editingCard.front.image,
@@ -155,14 +167,25 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
       };
 
-      const updated = await updateFlashcard(card.id, {
+      // Création de l'objet carte à mettre à jour
+      const updatedCardData = {
+        ...card,
         front: updatedFront,
         back: updatedBack,
-      });
-
+      };
+      
+      console.log("Préparation de l'envoi à storageAdapter.updateFlashcard...");
+      console.log("AudioFront préservé:", updatedCardData.front.audio ? "Oui" : "Non");
+      
+      const updated = await updateFlashcard(card.id, updatedCardData);
+      console.log("Résultat de la mise à jour:", updated ? "Succès" : "Échec");
+      
       if (updated) {
+        // Vérification des données après mise à jour
+        console.log("Données mises à jour - AudioFront préservé:", 
+                   updated.front.audio ? "Oui" : "Non");
+        
         setShowEditDialog(false);
-        // Convertir la Promise en Flashcard avec "as Flashcard"
         onUpdate?.(updated as Flashcard);
         toast({
           title: "Carte mise à jour",

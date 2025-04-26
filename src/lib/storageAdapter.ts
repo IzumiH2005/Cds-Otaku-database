@@ -9,6 +9,9 @@ import * as LocalStorage from './localStorage';
 import * as IndexedDB from './indexedDB';
 import { User, Deck, Theme, Flashcard, SharedDeckExport } from './localStorage';
 
+// Ré-exporter les types pour que les composants puissent les importer depuis storageAdapter
+export type { User, Deck, Theme, Flashcard, SharedDeckExport };
+
 // Flag pour suivre l'état de migration
 let migrationCompleted = false;
 
@@ -17,7 +20,11 @@ let migrationCompleted = false;
  * Vérifie si IndexedDB est supporté et disponible, 
  * et effectue la migration des données si nécessaire
  */
+let adapterInitialized = false;
+
 export async function initStorageAdapter(): Promise<void> {
+  console.log('Initialisation de l\'adaptateur de stockage...');
+  
   // Vérifier si IndexedDB est supporté par le navigateur
   if (!window.indexedDB) {
     console.error('IndexedDB n\'est pas supporté par ce navigateur. L\'application pourrait ne pas fonctionner correctement.');
@@ -41,11 +48,23 @@ export async function initStorageAdapter(): Promise<void> {
       // Quand même continuer avec IndexedDB, les fonctions géreront les erreurs
     }
   }
+  
+  adapterInitialized = true;
+  console.log('Adaptateur de stockage initialisé avec succès!');
+}
+
+// Fonction d'aide pour s'assurer que l'adaptateur est initialisé
+async function ensureInitialized() {
+  if (!adapterInitialized) {
+    console.log('Initialisation automatique de l\'adaptateur de stockage...');
+    await initStorageAdapter();
+  }
 }
 
 // Fonctions User
 export async function getUser(): Promise<User | null> {
   try {
+    await ensureInitialized();
     return await IndexedDB.getUser();
   } catch (error) {
     console.error('Erreur lors de la récupération de l\'utilisateur:', error);
@@ -82,6 +101,7 @@ export async function getDecks(): Promise<Deck[]> {
 
 export async function getDeck(id: string): Promise<Deck | null> {
   try {
+    await ensureInitialized();
     return await IndexedDB.getDeck(id);
   } catch (error) {
     console.error(`Erreur lors de la récupération du deck ${id}:`, error);
@@ -91,6 +111,7 @@ export async function getDeck(id: string): Promise<Deck | null> {
 
 export async function createDeck(deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> {
   try {
+    await ensureInitialized();
     return await IndexedDB.createDeck(deck);
   } catch (error) {
     console.error('Erreur lors de la création du deck:', error);
@@ -210,7 +231,11 @@ export async function getFlashcard(id: string): Promise<Flashcard | undefined> {
 
 export async function createFlashcard(flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flashcard> {
   try {
-    return await IndexedDB.createFlashcard(flashcard);
+    await ensureInitialized();
+    console.log('Création de flashcard avec données:', JSON.stringify(flashcard));
+    const result = await IndexedDB.createFlashcard(flashcard);
+    console.log('Résultat de création de flashcard:', JSON.stringify(result));
+    return result;
   } catch (error) {
     console.error('Erreur lors de la création de la flashcard:', error);
     throw new Error('Impossible de créer la flashcard');
@@ -219,7 +244,11 @@ export async function createFlashcard(flashcard: Omit<Flashcard, 'id' | 'created
 
 export async function updateFlashcard(id: string, cardData: Partial<Flashcard>): Promise<Flashcard | null> {
   try {
-    return await IndexedDB.updateFlashcard(id, cardData);
+    await ensureInitialized();
+    console.log(`Mise à jour de flashcard ${id} avec données:`, JSON.stringify(cardData));
+    const result = await IndexedDB.updateFlashcard(id, cardData);
+    console.log('Résultat de mise à jour de flashcard:', JSON.stringify(result));
+    return result;
   } catch (error) {
     console.error(`Erreur lors de la mise à jour de la flashcard ${id}:`, error);
     return null;
@@ -228,7 +257,11 @@ export async function updateFlashcard(id: string, cardData: Partial<Flashcard>):
 
 export async function deleteFlashcard(id: string): Promise<boolean> {
   try {
-    return await IndexedDB.deleteFlashcard(id);
+    await ensureInitialized();
+    console.log(`Suppression de flashcard ${id}`);
+    const result = await IndexedDB.deleteFlashcard(id);
+    console.log(`Résultat de suppression de flashcard ${id}:`, result);
+    return result;
   } catch (error) {
     console.error(`Erreur lors de la suppression de la flashcard ${id}:`, error);
     return false;

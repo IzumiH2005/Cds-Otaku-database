@@ -29,15 +29,13 @@ import {
   getUser, 
   createFlashcard, 
   updateFlashcard,
-  deleteFlashcard
-} from "@/lib/storageAdapter";
-
-import {
-  getBase64,
+  deleteFlashcard,
   Flashcard,
   Theme,
   Deck
-} from "@/lib/localStorage";
+} from "@/lib/storageAdapter";
+
+import { getBase64 } from "@/lib/utils";
 
 const ThemePage = () => {
   const { deckId, themeId } = useParams<{ deckId: string; themeId: string }>();
@@ -249,12 +247,34 @@ const ThemePage = () => {
 
   const handleUpdateCard = async (updatedCard: Flashcard) => {
     try {
+      console.log("Mise à jour de flashcard - ID:", updatedCard.id);
+      console.log("Audio front présent:", updatedCard.front.audio ? "Oui" : "Non");
+      console.log("Audio back présent:", updatedCard.back.audio ? "Oui" : "Non");
+      
+      // Log de la taille des données audio si présentes
+      if (updatedCard.front.audio) {
+        console.log("Taille audio front:", Math.round(updatedCard.front.audio.length / 1024), "Ko");
+      }
+      if (updatedCard.back.audio) {
+        console.log("Taille audio back:", Math.round(updatedCard.back.audio.length / 1024), "Ko");
+      }
+      
+      console.log("Envoi à IndexedDB pour mise à jour...");
       const updatedCardFromDB = await updateFlashcard(updatedCard.id, updatedCard);
+      console.log("Résultat de la mise à jour:", updatedCardFromDB ? "Succès" : "Échec");
+      
       if (updatedCardFromDB) {
         const updatedCards = flashcards.map(card => 
           card.id === updatedCard.id ? updatedCard : card
         );
         setFlashcards(updatedCards);
+        
+        toast({
+          title: "Carte mise à jour",
+          description: "La flashcard a été mise à jour avec succès",
+        });
+      } else {
+        throw new Error("La mise à jour n'a pas retourné la carte mise à jour");
       }
     } catch (error) {
       console.error("Error updating flashcard:", error);
@@ -288,6 +308,17 @@ const ThemePage = () => {
     }
     
     try {
+      console.log("Création de flashcard - audio front:", newCard.front.audio ? "présent" : "absent");
+      console.log("Création de flashcard - audio back:", newCard.back.audio ? "présent" : "absent");
+      
+      // Log de la taille des données audio si présentes
+      if (newCard.front.audio) {
+        console.log("Taille audio front:", Math.round(newCard.front.audio.length / 1024), "Ko");
+      }
+      if (newCard.back.audio) {
+        console.log("Taille audio back:", Math.round(newCard.back.audio.length / 1024), "Ko");
+      }
+      
       const frontData = {
         text: newCard.front.text.trim(),
         image: newCard.front.image,
@@ -302,6 +333,7 @@ const ThemePage = () => {
         additionalInfo: showBackAdditionalInfo ? newCard.back.additionalInfo.trim() : undefined
       };
       
+      console.log("Préparation à l'envoi des données à IndexedDB...");
       const card = await createFlashcard({
         deckId,
         themeId,
@@ -309,6 +341,7 @@ const ThemePage = () => {
         back: backData,
       });
       
+      console.log("Carte créée avec succès:", card);
       setFlashcards(prevCards => [...prevCards, card as Flashcard]);
       setShowCardDialog(false);
       
