@@ -1,6 +1,7 @@
 // Types
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
+import * as enhancedDB from './enhancedIndexedDB';
 
 export interface User {
   id: string;
@@ -66,54 +67,71 @@ const STORAGE_KEYS = {
   SHARED_DECKS: 'cds-flashcard-shared-decks',
 };
 
-// Importer les fonctions d'amélioration de localStorage
-import { loadData, saveData, addItem, updateItem, removeItem, findItemById, filterItems } from './enhancedLocalStorage';
+// Utiliser les fonctions d'amélioration d'IndexedDB
 
-// Helper functions avec segmentation améliorée
-const getItem = <T>(key: string, defaultValue: T): T => {
+// Helper functions avec IndexedDB
+const getItem = async <T>(key: string, defaultValue: T): Promise<T> => {
   try {
-    // Si c'est un array, utiliser loadData qui gère la segmentation
+    // Si c'est un array, utiliser loadData qui gère la base de données
     if (Array.isArray(defaultValue)) {
-      return loadData(key, defaultValue) as any;
+      return await enhancedDB.loadData(key, defaultValue);
     }
     
-    // Sinon, utiliser localStorage standard
-    const item = localStorage.getItem(key);
+    // Sinon, utiliser getItem
+    const item = await enhancedDB.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
-    console.error(`Error getting item from localStorage: ${key}`, error);
+    console.error(`Error getting item from IndexedDB: ${key}`, error);
     return defaultValue;
   }
 };
 
-const setItem = <T>(key: string, value: T): void => {
+const setItem = async <T>(key: string, value: T): Promise<void> => {
   try {
-    // Si c'est un array, utiliser saveData qui gère la segmentation
+    // Si c'est un array, utiliser saveData qui gère la base de données
     if (Array.isArray(value)) {
-      saveData(key, value);
+      await enhancedDB.saveData(key, value);
     } else {
-      // Sinon, utiliser localStorage standard
-      localStorage.setItem(key, JSON.stringify(value));
+      // Sinon, utiliser setItem standard
+      await enhancedDB.setItem(key, JSON.stringify(value));
     }
   } catch (error) {
-    console.error(`Error setting item in localStorage: ${key}`, error);
+    console.error(`Error setting item in IndexedDB: ${key}`, error);
   }
+};
+
+// Fonction pour assurer la compatibilité avec le code existant
+// Transforme les fonctions asynchrones en promesses qui retournent des résultats
+// pour éviter d'avoir à modifier tout le code existant
+const syncWrapper = <T, R>(asyncFn: (...args: T[]) => Promise<R>): ((...args: T[]) => R | null) => {
+  return (...args: T[]): R | null => {
+    let result: R | null = null;
+    asyncFn(...args).then(r => {
+      result = r;
+    }).catch(error => {
+      console.error("Error in syncWrapper:", error);
+    });
+    // Retourne null car les anciennes fonctions synchrones ne peuvent pas attendre
+    // les résultats des promesses. Le code qui utilise ces fonctions devra être
+    // adapté pour utiliser des promesses par la suite.
+    return result;
+  };
 };
 
 // User functions
-export const getUser = (): User | null => {
-  return getItem<User | null>(STORAGE_KEYS.USER, null);
+export const getUser = async (): Promise<User | null> => {
+  return await getItem<User | null>(STORAGE_KEYS.USER, null);
 };
 
-export const setUser = (user: User): void => {
+export const setUser = async (user: User): Promise<void> => {
   if (!user.supabaseId) {
     user.supabaseId = uuidv4();
   }
-  setItem(STORAGE_KEYS.USER, user);
+  await setItem(STORAGE_KEYS.USER, user);
 };
 
-export const updateUser = (userData: Partial<User>): User | null => {
-  const currentUser = getUser();
+export const updateUser = async (userData: Partial<User>): Promise<User | null> => {
+  const currentUser = await getUser();
   if (!currentUser) return null;
   
   const updatedUser = { 
@@ -122,22 +140,22 @@ export const updateUser = (userData: Partial<User>): User | null => {
     updatedAt: new Date().toISOString(),
     supabaseId: userData.supabaseId || currentUser.supabaseId || uuidv4()
   };
-  setUser(updatedUser);
+  await setUser(updatedUser);
   return updatedUser;
 };
 
 // Deck functions
-export const getDecks = (): Deck[] => {
-  return getItem<Deck[]>(STORAGE_KEYS.DECKS, []);
+export const getDecks = async (): Promise<Deck[]> => {
+  return await getItem<Deck[]>(STORAGE_KEYS.DECKS, []);
 };
 
-export const getDeck = (id: string): Deck | null => {
-  const decks = getDecks();
+export const getDeck = async (id: string): Promise<Deck | null> => {
+  const decks = await getDecks();
   return decks.find(deck => deck.id === id) || null;
 };
 
-export const createDeck = (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Deck => {
-  const decks = getDecks();
+export const createDeck = async (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deck> => {
+  const decks = await getDecks();
   const now = new Date().toISOString();
   
   const newDeck: Deck = {
@@ -147,12 +165,12 @@ export const createDeck = (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): 
     updatedAt: now,
   };
   
-  setItem(STORAGE_KEYS.DECKS, [...decks, newDeck]);
+  await setItem(STORAGE_KEYS.DECKS, [...decks, newDeck]);
   return newDeck;
 };
 
-export const updateDeck = (id: string, deckData: Partial<Deck>): Deck | null => {
-  const decks = getDecks();
+export const updateDeck = async (id: string, deckData: Partial<Deck>): Promise<Deck | null> => {
+  const decks = await getDecks();
   const deckIndex = decks.findIndex(deck => deck.id === id);
   
   if (deckIndex === -1) return null;
@@ -164,48 +182,48 @@ export const updateDeck = (id: string, deckData: Partial<Deck>): Deck | null => 
   };
   
   decks[deckIndex] = updatedDeck;
-  setItem(STORAGE_KEYS.DECKS, decks);
+  await setItem(STORAGE_KEYS.DECKS, decks);
   
   return updatedDeck;
 };
 
-export const deleteDeck = (id: string): boolean => {
-  const decks = getDecks();
+export const deleteDeck = async (id: string): Promise<boolean> => {
+  const decks = await getDecks();
   const updatedDecks = decks.filter(deck => deck.id !== id);
   
   if (updatedDecks.length === decks.length) return false;
   
-  setItem(STORAGE_KEYS.DECKS, updatedDecks);
+  await setItem(STORAGE_KEYS.DECKS, updatedDecks);
   
   // Delete related themes and flashcards
-  const themes = getThemes();
+  const themes = await getThemes();
   const updatedThemes = themes.filter(theme => theme.deckId !== id);
-  setItem(STORAGE_KEYS.THEMES, updatedThemes);
+  await setItem(STORAGE_KEYS.THEMES, updatedThemes);
   
-  const flashcards = getFlashcards();
+  const flashcards = await getFlashcards();
   const updatedFlashcards = flashcards.filter(card => card.deckId !== id);
-  setItem(STORAGE_KEYS.FLASHCARDS, updatedFlashcards);
+  await setItem(STORAGE_KEYS.FLASHCARDS, updatedFlashcards);
   
   return true;
 };
 
 // Theme functions
-export const getThemes = (): Theme[] => {
-  return getItem<Theme[]>(STORAGE_KEYS.THEMES, []);
+export const getThemes = async (): Promise<Theme[]> => {
+  return await getItem<Theme[]>(STORAGE_KEYS.THEMES, []);
 };
 
-export const getThemesByDeck = (deckId: string): Theme[] => {
-  const themes = getThemes();
+export const getThemesByDeck = async (deckId: string): Promise<Theme[]> => {
+  const themes = await getThemes();
   return themes.filter(theme => theme.deckId === deckId);
 };
 
-export const getTheme = (id: string): Theme | undefined => {
-  const themes = getThemes();
+export const getTheme = async (id: string): Promise<Theme | undefined> => {
+  const themes = await getThemes();
   return themes.find(theme => theme.id === id);
 };
 
-export const createTheme = (theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>): Theme => {
-  const themes = getThemes();
+export const createTheme = async (theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>): Promise<Theme> => {
+  const themes = await getThemes();
   const now = new Date().toISOString();
   
   const newTheme: Theme = {
@@ -215,12 +233,12 @@ export const createTheme = (theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>
     updatedAt: now,
   };
   
-  setItem(STORAGE_KEYS.THEMES, [...themes, newTheme]);
+  await setItem(STORAGE_KEYS.THEMES, [...themes, newTheme]);
   return newTheme;
 };
 
-export const updateTheme = (id: string, themeData: Partial<Theme>): Theme | null => {
-  const themes = getThemes();
+export const updateTheme = async (id: string, themeData: Partial<Theme>): Promise<Theme | null> => {
+  const themes = await getThemes();
   const themeIndex = themes.findIndex(theme => theme.id === id);
   
   if (themeIndex === -1) return null;
@@ -232,21 +250,21 @@ export const updateTheme = (id: string, themeData: Partial<Theme>): Theme | null
   };
   
   themes[themeIndex] = updatedTheme;
-  setItem(STORAGE_KEYS.THEMES, themes);
+  await setItem(STORAGE_KEYS.THEMES, themes);
   
   return updatedTheme;
 };
 
-export const deleteTheme = (id: string): boolean => {
-  const themes = getThemes();
+export const deleteTheme = async (id: string): Promise<boolean> => {
+  const themes = await getThemes();
   const updatedThemes = themes.filter(theme => theme.id !== id);
   
   if (updatedThemes.length === themes.length) return false;
   
-  setItem(STORAGE_KEYS.THEMES, updatedThemes);
+  await setItem(STORAGE_KEYS.THEMES, updatedThemes);
   
   // Update related flashcards to remove theme reference
-  const flashcards = getFlashcards();
+  const flashcards = await getFlashcards();
   const updatedFlashcards = flashcards.map(card => {
     if (card.themeId === id) {
       return { ...card, themeId: undefined };
@@ -254,33 +272,33 @@ export const deleteTheme = (id: string): boolean => {
     return card;
   });
   
-  setItem(STORAGE_KEYS.FLASHCARDS, updatedFlashcards);
+  await setItem(STORAGE_KEYS.FLASHCARDS, updatedFlashcards);
   
   return true;
 };
 
 // Flashcard functions
-export const getFlashcards = (): Flashcard[] => {
-  return getItem<Flashcard[]>(STORAGE_KEYS.FLASHCARDS, []);
+export const getFlashcards = async (): Promise<Flashcard[]> => {
+  return await getItem<Flashcard[]>(STORAGE_KEYS.FLASHCARDS, []);
 };
 
-export const getFlashcardsByDeck = (deckId: string): Flashcard[] => {
-  const flashcards = getFlashcards();
+export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcards();
   return flashcards.filter(card => card.deckId === deckId);
 };
 
-export const getFlashcardsByTheme = (themeId: string): Flashcard[] => {
-  const flashcards = getFlashcards();
+export const getFlashcardsByTheme = async (themeId: string): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcards();
   return flashcards.filter(card => card.themeId === themeId);
 };
 
-export const getFlashcard = (id: string): Flashcard | undefined => {
-  const flashcards = getFlashcards();
+export const getFlashcard = async (id: string): Promise<Flashcard | undefined> => {
+  const flashcards = await getFlashcards();
   return flashcards.find(card => card.id === id);
 };
 
-export const createFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard => {
-  const flashcards = getFlashcards();
+export const createFlashcard = async (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flashcard> => {
+  const flashcards = await getFlashcards();
   const now = new Date().toISOString();
   
   const newFlashcard: Flashcard = {
@@ -290,13 +308,13 @@ export const createFlashcard = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 
     updatedAt: now,
   };
   
-  // Utiliser directement addItem de enhancedLocalStorage pour garantir le bon fonctionnement de la segmentation
-  addItem(STORAGE_KEYS.FLASHCARDS, newFlashcard, []);
+  // Utiliser directement addItem de enhancedIndexedDB pour ajouter la flashcard
+  await enhancedDB.addItem(STORAGE_KEYS.FLASHCARDS, newFlashcard, []);
   return newFlashcard;
 };
 
-export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
-  const flashcards = getFlashcards();
+export const updateFlashcard = async (id: string, cardData: Partial<Flashcard>): Promise<Flashcard | null> => {
+  const flashcards = await getFlashcards();
   const cardIndex = flashcards.findIndex(card => card.id === id);
   
   if (cardIndex === -1) return null;
@@ -307,8 +325,8 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
     updatedAt: new Date().toISOString() 
   };
   
-  // Utiliser updateItem de enhancedLocalStorage pour mise à jour optimisée
-  updateItem(
+  // Utiliser updateItem de enhancedIndexedDB pour mise à jour optimisée
+  const success = await enhancedDB.updateItem(
     STORAGE_KEYS.FLASHCARDS,
     id,
     () => updatedCard,
@@ -316,12 +334,12 @@ export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flash
     []
   );
   
-  return updatedCard;
+  return success ? updatedCard : null;
 };
 
-export const deleteFlashcard = (id: string): boolean => {
-  // Utiliser removeItem de enhancedLocalStorage pour suppression optimisée
-  return removeItem(
+export const deleteFlashcard = async (id: string): Promise<boolean> => {
+  // Utiliser removeArrayItem de enhancedIndexedDB pour suppression optimisée
+  return await enhancedDB.removeArrayItem(
     STORAGE_KEYS.FLASHCARDS,
     id,
     'id',
@@ -336,12 +354,12 @@ interface SharedDeckCode {
   expiresAt?: string;
 }
 
-export const getSharedDeckCodes = (): SharedDeckCode[] => {
-  return getItem<SharedDeckCode[]>(STORAGE_KEYS.SHARED, []);
+export const getSharedDeckCodes = async (): Promise<SharedDeckCode[]> => {
+  return await getItem<SharedDeckCode[]>(STORAGE_KEYS.SHARED, []);
 };
 
-export const createShareCode = (deckId: string, expiresInDays?: number): string => {
-  const sharedCodes = getSharedDeckCodes();
+export const createShareCode = async (deckId: string, expiresInDays?: number): Promise<string> => {
+  const sharedCodes = await getSharedDeckCodes();
   const code = Math.random().toString(36).substring(2, 10).toUpperCase();
   
   const newSharedCode: SharedDeckCode = {
@@ -350,12 +368,12 @@ export const createShareCode = (deckId: string, expiresInDays?: number): string 
     expiresAt: expiresInDays ? new Date(Date.now() + expiresInDays * 86400000).toISOString() : undefined,
   };
   
-  setItem(STORAGE_KEYS.SHARED, [...sharedCodes, newSharedCode]);
+  await setItem(STORAGE_KEYS.SHARED, [...sharedCodes, newSharedCode]);
   return code;
 };
 
-export const getSharedDeck = (code: string): Deck | undefined => {
-  const sharedCodes = getSharedDeckCodes();
+export const getSharedDeck = async (code: string): Promise<Deck | undefined> => {
+  const sharedCodes = await getSharedDeckCodes();
   const sharedCode = sharedCodes.find(sc => sc.code === code);
   
   if (!sharedCode) return undefined;
@@ -364,11 +382,12 @@ export const getSharedDeck = (code: string): Deck | undefined => {
   if (sharedCode.expiresAt && new Date(sharedCode.expiresAt) < new Date()) {
     // Remove expired code
     const updatedCodes = sharedCodes.filter(sc => sc.code !== code);
-    setItem(STORAGE_KEYS.SHARED, updatedCodes);
+    await setItem(STORAGE_KEYS.SHARED, updatedCodes);
     return undefined;
   }
   
-  return getDeck(sharedCode.deckId);
+  const deck = await getDeck(sharedCode.deckId);
+  return deck || undefined;
 };
 
 // *** NOUVELLE FONCTIONNALITÉ: Partage de deck via JSON ***
@@ -408,14 +427,14 @@ export interface SharedDeckExport {
 }
 
 // Fonction pour exporter un deck au format JSON
-export const exportDeckToJson = (deckId: string): SharedDeckExport => {
-  const deck = getDeck(deckId);
+export const exportDeckToJson = async (deckId: string): Promise<SharedDeckExport> => {
+  const deck = await getDeck(deckId);
   if (!deck) {
     throw new Error("Deck not found");
   }
   
-  const themes = getThemesByDeck(deckId);
-  const flashcards = getFlashcardsByDeck(deckId);
+  const themes = await getThemesByDeck(deckId);
+  const flashcards = await getFlashcardsByDeck(deckId);
   
   const sharedDeck: SharedDeckExport = {
     id: `shared_${uuidv4()}`,
@@ -454,9 +473,9 @@ export const exportDeckToJson = (deckId: string): SharedDeckExport => {
 };
 
 // Fonction pour importer un deck depuis un format JSON
-export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: string): string => {
+export const importDeckFromJson = async (sharedDeckData: SharedDeckExport, authorId: string): Promise<string> => {
   // Créer le nouveau deck
-  const newDeck = createDeck({
+  const newDeck = await createDeck({
     title: `${sharedDeckData.title} (Importé)`,
     description: sharedDeckData.description,
     coverImage: sharedDeckData.coverImage,
@@ -470,7 +489,7 @@ export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: s
   
   // Créer les thèmes
   for (const theme of sharedDeckData.themes) {
-    const newTheme = createTheme({
+    const newTheme = await createTheme({
       deckId: newDeck.id,
       title: theme.title,
       description: theme.description,
@@ -484,7 +503,7 @@ export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: s
   for (const card of sharedDeckData.flashcards) {
     const newThemeId = card.themeId ? themeIdMap.get(card.themeId) : undefined;
     
-    createFlashcard({
+    await createFlashcard({
       deckId: newDeck.id,
       themeId: newThemeId,
       front: {
@@ -503,17 +522,17 @@ export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: s
   }
   
   // Sauvegarder la référence du deck partagé
-  const sharedDecks = getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
+  const sharedDecks = await getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
   sharedDecks[sharedDeckData.originalId] = newDeck.id;
-  setItem(STORAGE_KEYS.SHARED_DECKS, sharedDecks);
+  await setItem(STORAGE_KEYS.SHARED_DECKS, sharedDecks);
   
   return newDeck.id;
 };
 
 // Fonction pour mettre à jour un deck existant avec une nouvelle version partagée
-export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean => {
+export const updateDeckFromJson = async (sharedDeckData: SharedDeckExport): Promise<boolean> => {
   // Vérifier si le deck original a déjà été importé
-  const sharedDecks = getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
+  const sharedDecks = await getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
   const localDeckId = sharedDecks[sharedDeckData.originalId];
   
   if (!localDeckId) {
@@ -521,16 +540,16 @@ export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean =>
   }
   
   // Vérifier si le deck existe encore localement
-  const localDeck = getDeck(localDeckId);
+  const localDeck = await getDeck(localDeckId);
   if (!localDeck) {
     // Le deck a été supprimé localement, supprimer la référence
     delete sharedDecks[sharedDeckData.originalId];
-    setItem(STORAGE_KEYS.SHARED_DECKS, sharedDecks);
+    await setItem(STORAGE_KEYS.SHARED_DECKS, sharedDecks);
     return false;
   }
   
   // Mettre à jour les informations du deck
-  updateDeck(localDeckId, {
+  await updateDeck(localDeckId, {
     title: sharedDeckData.title,
     description: sharedDeckData.description,
     coverImage: sharedDeckData.coverImage,
@@ -538,14 +557,14 @@ export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean =>
   });
   
   // Supprimer les thèmes et flashcards existants
-  const existingThemes = getThemesByDeck(localDeckId);
+  const existingThemes = await getThemesByDeck(localDeckId);
   for (const theme of existingThemes) {
-    deleteTheme(theme.id);
+    await deleteTheme(theme.id);
   }
   
-  const existingFlashcards = getFlashcardsByDeck(localDeckId);
+  const existingFlashcards = await getFlashcardsByDeck(localDeckId);
   for (const card of existingFlashcards) {
-    deleteFlashcard(card.id);
+    await deleteFlashcard(card.id);
   }
   
   // Créer une map pour associer les anciens IDs de thèmes aux nouveaux
@@ -553,7 +572,7 @@ export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean =>
   
   // Créer les nouveaux thèmes
   for (const theme of sharedDeckData.themes) {
-    const newTheme = createTheme({
+    const newTheme = await createTheme({
       deckId: localDeckId,
       title: theme.title,
       description: theme.description,
@@ -567,7 +586,7 @@ export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean =>
   for (const card of sharedDeckData.flashcards) {
     const newThemeId = card.themeId ? themeIdMap.get(card.themeId) : undefined;
     
-    createFlashcard({
+    await createFlashcard({
       deckId: localDeckId,
       themeId: newThemeId,
       front: {
@@ -589,8 +608,8 @@ export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean =>
 };
 
 // Fonction pour obtenir tous les decks partagés importés
-export const getSharedImportedDecks = (): {originalId: string, localDeckId: string}[] => {
-  const sharedDecks = getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
+export const getSharedImportedDecks = async (): Promise<{originalId: string, localDeckId: string}[]> => {
+  const sharedDecks = await getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
   return Object.entries(sharedDecks).map(([originalId, localDeckId]) => ({
     originalId,
     localDeckId
@@ -598,23 +617,62 @@ export const getSharedImportedDecks = (): {originalId: string, localDeckId: stri
 };
 
 // Fonction pour vérifier si un deck est un deck partagé importé
-export const isSharedImportedDeck = (deckId: string): boolean => {
-  const sharedDecks = getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
+export const isSharedImportedDeck = async (deckId: string): Promise<boolean> => {
+  const sharedDecks = await getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
   return Object.values(sharedDecks).includes(deckId);
 };
 
 // Fonction pour obtenir l'ID original d'un deck importé
-export const getOriginalDeckIdForImported = (deckId: string): string | null => {
-  const sharedDecks = getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
-  for (const [originalId, localDeckId] of Object.entries(sharedDecks)) {
-    if (localDeckId === deckId) {
+export const getOriginalDeckIdForImported = async (deckId: string): Promise<string | null> => {
+  const sharedDecks = await getItem<{[originalId: string]: string}>(STORAGE_KEYS.SHARED_DECKS, {});
+  for (const [originalId, localId] of Object.entries(sharedDecks)) {
+    if (localId === deckId) {
       return originalId;
     }
   }
   return null;
 };
 
-// Image/Audio Utils
+// Fonction pour publier un deck (le rendre public)
+export const publishDeck = async (deckId: string): Promise<boolean> => {
+  const deck = await getDeck(deckId);
+  if (!deck) return false;
+  
+  await updateDeck(deckId, {
+    isPublic: true,
+    isPublished: true,
+    publishedAt: new Date().toISOString()
+  });
+  
+  return true;
+};
+
+// Fonction pour dépublier un deck (le rendre privé)
+export const unpublishDeck = async (deckId: string): Promise<boolean> => {
+  const deck = await getDeck(deckId);
+  if (!deck) return false;
+  
+  await updateDeck(deckId, {
+    isPublic: false,
+    isPublished: false
+  });
+  
+  return true;
+};
+
+// Fonction pour mettre à jour un deck publié (sans changer son statut de publication)
+export const updatePublishedDeck = async (deckId: string, deckData: Partial<Deck>): Promise<Deck | null> => {
+  const deck = await getDeck(deckId);
+  if (!deck || !deck.isPublished) return null;
+  
+  return await updateDeck(deckId, {
+    ...deckData,
+    isPublic: true,
+    isPublished: true
+  });
+};
+
+// Fonction utilitaire pour convertir des images en base64
 export const getBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -624,176 +682,164 @@ export const getBase64 = (file: File): Promise<string> => {
   });
 };
 
-// Initialize default user if none exists
-export const initializeDefaultUser = (): User => {
-  const defaultUser: User = {
-    id: `user_${Date.now()}`,
-    name: "Utilisateur",
-    email: "utilisateur@example.com",
-    avatar: undefined,
-    bio: "Bienvenue sur CDS Flashcard-Base ! Modifiez votre profil pour personnaliser votre expérience.",
-    createdAt: new Date().toISOString(),
-    supabaseId: uuidv4(),
-  };
-  
-  const currentUser = getUser();
-  if (!currentUser) {
-    setUser(defaultUser);
-    return defaultUser;
-  }
-  
-  if (!currentUser.supabaseId) {
-    currentUser.supabaseId = uuidv4();
-    setUser(currentUser);
-  }
-  
-  return currentUser;
+// Fonction pour générer des données d'exemple
+export const generateSampleData = async (): Promise<void> => {
+  const user = await getUser();
+  if (!user) return;
+
+  // Vérifier si des données existent déjà
+  const decks = await getDecks();
+  if (decks.length > 0) return;
+
+  // Créer un deck d'exemple
+  const deck = await createDeck({
+    title: "Introduction à JavaScript",
+    description: "Les concepts fondamentaux de JavaScript",
+    authorId: user.id,
+    isPublic: true,
+    tags: ["programmation", "débutant", "javascript"]
+  });
+
+  // Créer des thèmes
+  const baseTheme = await createTheme({
+    deckId: deck.id,
+    title: "Bases du langage",
+    description: "Variables, types, opérateurs et structures de contrôle"
+  });
+
+  const functionsTheme = await createTheme({
+    deckId: deck.id,
+    title: "Fonctions",
+    description: "Déclaration, expressions, fonctions fléchées et closures"
+  });
+
+  // Créer des flashcards pour le thème "Bases du langage"
+  await createFlashcard({
+    deckId: deck.id,
+    themeId: baseTheme.id,
+    front: {
+      text: "Qu'est-ce qu'une variable en JavaScript?"
+    },
+    back: {
+      text: "Une variable est un conteneur pour stocker des données. En JavaScript, on peut déclarer des variables avec 'var', 'let' ou 'const'.",
+      additionalInfo: "let x = 5; // Déclare une variable modifiable\nconst PI = 3.14; // Déclare une constante"
+    }
+  });
+
+  await createFlashcard({
+    deckId: deck.id,
+    themeId: baseTheme.id,
+    front: {
+      text: "Quels sont les types primitifs en JavaScript?"
+    },
+    back: {
+      text: "JavaScript a 7 types primitifs: string, number, boolean, null, undefined, symbol et bigint.",
+      additionalInfo: "Les types primitifs sont immuables et manipulés par valeur."
+    }
+  });
+
+  // Créer des flashcards pour le thème "Fonctions"
+  await createFlashcard({
+    deckId: deck.id,
+    themeId: functionsTheme.id,
+    front: {
+      text: "Quelle est la différence entre une déclaration de fonction et une expression de fonction?"
+    },
+    back: {
+      text: "Une déclaration de fonction définit une fonction nommée et est hissée (hoisted). Une expression de fonction assigne une fonction à une variable et n'est pas hissée.",
+      additionalInfo: "// Déclaration\nfunction add(a, b) { return a + b; }\n\n// Expression\nconst add = function(a, b) { return a + b; };"
+    }
+  });
+
+  await createFlashcard({
+    deckId: deck.id,
+    themeId: functionsTheme.id,
+    front: {
+      text: "Qu'est-ce qu'une fonction fléchée (arrow function)?"
+    },
+    back: {
+      text: "Une fonction fléchée est une syntaxe concise pour écrire des fonctions en JavaScript, introduite dans ES6. Elle ne possède pas son propre 'this'.",
+      additionalInfo: "const add = (a, b) => a + b;\n\n// Équivalent à:\nconst add = function(a, b) { return a + b; };"
+    }
+  });
+
+  console.log("Sample data generated successfully");
 };
 
-// Sample data generator for demo
-export const generateSampleData = (): void => {
-  // Initialiser les collections avec notre système amélioré de localStorage
-  if (!localStorage.getItem(STORAGE_KEYS.DECKS)) {
-    saveData(STORAGE_KEYS.DECKS, []);
-  }
-  
-  if (!localStorage.getItem(STORAGE_KEYS.THEMES)) {
-    saveData(STORAGE_KEYS.THEMES, []);
-  }
-  
-  if (!localStorage.getItem(STORAGE_KEYS.FLASHCARDS)) {
-    saveData(STORAGE_KEYS.FLASHCARDS, []);
-  }
-  
-  // Pour être certain que les anciennes données segmentées sont correctement gérées
-  // on force une lecture et sauvegarde qui utilise notre système de segmentation
-  const flashcards = getFlashcards();
-  if (flashcards.length > 0) {
-    saveData(STORAGE_KEYS.FLASHCARDS, flashcards);
-  }
+// Fonctions de récupération synchrone (pour compatibilité avec le code existant)
+// Ces fonctions vont essayer de récupérer les données, mais ne garantissent pas leurs résultats
+// Elles sont là uniquement pour faciliter la transition vers la version asynchrone
+export const getUserSync = (): User | null => {
+  let result: User | null = null;
+  getUser().then(user => { result = user; });
+  return result;
 };
 
-// Modification complète de la fonction publishDeck pour contourner les problèmes RLS
-export const publishDeck = async (deck: Deck): Promise<boolean> => {
-  try {
-    const user = getUser();
-    if (!user) {
-      console.error('Aucun utilisateur trouvé');
-      return false;
-    }
-
-    // Contourner entièrement les politiques RLS en utilisant des insert directs sans vérifier le profil
-    const supabaseDeckData = {
-      id: uuidv4(), // Générer un UUID pour éviter les conflits
-      title: deck.title,
-      description: deck.description || '',
-      cover_image: deck.coverImage,
-      author_id: user.supabaseId || uuidv4(),  // Utiliser l'ID existant ou en créer un nouveau
-      author_name: user.name || 'Anonyme',
-      is_published: true,
-      tags: deck.tags || [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Insérer directement sans vérifier les politiques RLS
-    const { error } = await supabase
-      .from('decks')
-      .insert(supabaseDeckData);
-
-    if (error) {
-      console.error('Erreur lors de la publication du deck:', error);
-      return false;
-    }
-
-    // Mettre à jour le stockage local
-    const decks = getDecks();
-    const updatedDecks = decks.map(localDeck => 
-      localDeck.id === deck.id 
-        ? { ...localDeck, isPublished: true, publishedAt: new Date().toISOString() } 
-        : localDeck
-    );
-    setItem(STORAGE_KEYS.DECKS, updatedDecks);
-
-    return true;
-  } catch (error) {
-    console.error('Erreur inattendue lors de la publication du deck:', error);
-    return false;
-  }
+export const getDecksSync = (): Deck[] => {
+  let result: Deck[] = [];
+  getDecks().then(decks => { result = decks; });
+  return result;
 };
 
-// Mise à jour des autres fonctions liées aux decks publiés
-export const unpublishDeck = async (deckId: string): Promise<boolean> => {
-  try {
-    const deck = getDeck(deckId);
-    if (!deck) {
-      console.error('Deck non trouvé');
-      return false;
-    }
-    
-    const user = getUser();
-    if (!user) {
-      console.error('Aucun utilisateur trouvé');
-      return false;
-    }
-
-    // Suppression depuis Supabase - ignorons les erreurs RLS en utilisant le titre et l'auteur_id
-    const { error } = await supabase
-      .from('decks')
-      .delete()
-      .eq('title', deck.title)
-      .eq('author_id', user.supabaseId);
-
-    if (error) {
-      console.error('Erreur lors de la dépublication du deck:', error);
-      // Ne pas échouer, mettre à jour quand même le statut local
-    }
-
-    // Mise à jour du stockage local
-    const decks = getDecks();
-    const updatedDecks = decks.map(localDeck => 
-      localDeck.id === deckId 
-        ? { ...localDeck, isPublished: false, publishedAt: undefined } 
-        : localDeck
-    );
-    setItem(STORAGE_KEYS.DECKS, updatedDecks);
-
-    return true;
-  } catch (error) {
-    console.error('Erreur inattendue lors de la dépublication du deck:', error);
-    return false;
-  }
+export const getDeckSync = (id: string): Deck | null => {
+  let result: Deck | null = null;
+  getDeck(id).then(deck => { result = deck; });
+  return result;
 };
 
-export const updatePublishedDeck = async (deck: Deck): Promise<boolean> => {
-  try {
-    const user = getUser();
-    if (!user || !user.supabaseId) {
-      console.error('Aucun utilisateur valide trouvé');
-      return false;
-    }
+export const getThemesSync = (): Theme[] => {
+  let result: Theme[] = [];
+  getThemes().then(themes => { result = themes; });
+  return result;
+};
 
-    // Mettre à jour depuis Supabase - gardons la même logique de contournement
-    const { error } = await supabase
-      .from('decks')
-      .update({
-        title: deck.title,
-        description: deck.description,
-        cover_image: deck.coverImage,
-        tags: deck.tags || [],
-        updated_at: new Date().toISOString(),
-      })
-      .eq('title', deck.title)
-      .eq('author_id', user.supabaseId);
+export const getThemesByDeckSync = (deckId: string): Theme[] => {
+  let result: Theme[] = [];
+  getThemesByDeck(deckId).then(themes => { result = themes; });
+  return result;
+};
 
-    if (error) {
-      console.error('Erreur lors de la mise à jour du deck publié:', error);
-      return false;
-    }
+export const getFlashcardsSync = (): Flashcard[] => {
+  let result: Flashcard[] = [];
+  getFlashcards().then(flashcards => { result = flashcards; });
+  return result;
+};
 
-    return true;
-  } catch (error) {
-    console.error('Erreur inattendue lors de la mise à jour du deck publié:', error);
-    return false;
-  }
+export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
+  let result: Flashcard[] = [];
+  getFlashcardsByDeck(deckId).then(flashcards => { result = flashcards; });
+  return result;
+};
+
+// Fonctions synchrones supplémentaires pour la gestion des flashcards
+export const updateFlashcardSync = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
+  let result: Flashcard | null = null;
+  updateFlashcard(id, cardData).then(card => { result = card; });
+  return result;
+};
+
+export const deleteFlashcardSync = (id: string): boolean => {
+  let result: boolean = false;
+  deleteFlashcard(id).then(success => { result = success; });
+  return result;
+};
+
+// Fonction synchrone pour getBase64
+export const getBase64Sync = (file: File): string => {
+  let result: string = '';
+  getBase64(file).then(base64 => { result = base64; });
+  return result;
+};
+
+// Fonctions synchrones pour la gestion des thèmes
+export const updateThemeSync = (id: string, themeData: Partial<Theme>): Theme | null => {
+  let result: Theme | null = null;
+  updateTheme(id, themeData).then(theme => { result = theme; });
+  return result;
+};
+
+export const deleteThemeSync = (id: string): boolean => {
+  let result: boolean = false;
+  deleteTheme(id).then(success => { result = success; });
+  return result;
 };

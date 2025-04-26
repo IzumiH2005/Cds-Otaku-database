@@ -12,8 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import FlashCard from "@/components/FlashCard";
-import { getDeck, getFlashcardsByDeck, Flashcard, getThemesByDeck } from "@/lib/localStorage";
-import { recordCardStudy, updateSessionStats } from "@/lib/sessionManager";
+import { getDeckSync as getDeck, getFlashcardsByDeckSync as getFlashcardsByDeck, Flashcard, getThemesByDeckSync as getThemesByDeck } from "@/lib/localStorage";
+import { recordCardStudySync as recordCardStudy, updateSessionStatsSync as updateSessionStats } from "@/lib/sessionManager";
+import * as enhancedDB from "@/lib/enhancedIndexedDB";
 import { ArrowLeft, ArrowRight, Check, X, Shuffle, ThumbsUp, ThumbsDown, Lightbulb, MessageSquare, Repeat } from "lucide-react";
 import { evaluateAnswer } from "@/services/geminiService";
 
@@ -49,12 +50,25 @@ const StudyPage = () => {
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [incorrectAnswers, setIncorrectAnswers] = useState(0);
   const [showResults, setShowResults] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
-    return localStorage.getItem('gemini-api-key') || '';
-  });
-  const [isGeminiEnabled, setIsGeminiEnabled] = useState<boolean>(() => {
-    return !!localStorage.getItem('gemini-api-key');
-  });
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [isGeminiEnabled, setIsGeminiEnabled] = useState<boolean>(false);
+  
+  // Charger la clé API Gemini depuis IndexedDB
+  useEffect(() => {
+    const loadGeminiApiKey = async () => {
+      try {
+        const apiKey = await enhancedDB.getItem('gemini-api-key');
+        if (apiKey) {
+          setGeminiApiKey(apiKey);
+          setIsGeminiEnabled(true);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement de la clé API Gemini:", error);
+      }
+    };
+    
+    loadGeminiApiKey();
+  }, []);
   const [apiChecking, setApiChecking] = useState(false);
   const [studyStartTime] = useState(new Date());
   const answerInputRef = useRef<HTMLInputElement>(null);
@@ -63,40 +77,44 @@ const StudyPage = () => {
   useEffect(() => {
     if (!id) return;
 
-    try {
-      const deckData = getDeck(id);
-      if (!deckData) {
+    const loadDeckData = async () => {
+      try {
+        const deckData = getDeck(id);
+        if (!deckData) {
+          toast({
+            title: "Deck introuvable",
+            description: "Le deck demandé n'existe pas",
+            variant: "destructive",
+          });
+          navigate("/");
+          return;
+        }
+        setDeck(deckData);
+
+        const deckCards = getFlashcardsByDeck(id);
+        setCards(deckCards);
+
+        const deckThemes = getThemesByDeck(id);
+        setThemes(deckThemes);
+
+        setFilteredCards(shuffle ? shuffleArray([...deckCards]) : [...deckCards]);
+
+        updateSessionStats({
+          studySessions: 1,
+          lastStudyDate: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Error loading study data:", error);
         toast({
-          title: "Deck introuvable",
-          description: "Le deck demandé n'existe pas",
+          title: "Erreur",
+          description: "Impossible de charger les données du deck",
           variant: "destructive",
         });
-        navigate("/");
-        return;
       }
-      setDeck(deckData);
+    };
 
-      const deckCards = getFlashcardsByDeck(id);
-      setCards(deckCards);
-
-      const deckThemes = getThemesByDeck(id);
-      setThemes(deckThemes);
-
-      setFilteredCards(shuffle ? shuffleArray([...deckCards]) : [...deckCards]);
-
-      updateSessionStats({
-        studySessions: 1,
-        lastStudyDate: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Error loading study data:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données du deck",
-        variant: "destructive",
-      });
-    }
-  }, [id, navigate, toast]);
+    loadDeckData();
+  }, [id, navigate, toast, shuffle]);
 
   useEffect(() => {
     if (!cards.length) return;
@@ -341,18 +359,26 @@ const StudyPage = () => {
   };
 
   useEffect(() => {
-    if (geminiApiKey) {
-      localStorage.setItem('gemini-api-key', geminiApiKey);
-      setIsGeminiEnabled(true);
-      toast({
-        title: "API Gemini configurée",
-        description: "Vous pouvez maintenant utiliser la vérification automatique",
-        variant: "default",
-      });
-    } else {
-      localStorage.removeItem('gemini-api-key');
-      setIsGeminiEnabled(false);
-    }
+    const updateGeminiApiKey = async () => {
+      try {
+        if (geminiApiKey) {
+          await enhancedDB.setItem('gemini-api-key', geminiApiKey);
+          setIsGeminiEnabled(true);
+          toast({
+            title: "API Gemini configurée",
+            description: "Vous pouvez maintenant utiliser la vérification automatique",
+            variant: "default",
+          });
+        } else {
+          await enhancedDB.removeItemByKey('gemini-api-key');
+          setIsGeminiEnabled(false);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de la clé API Gemini:", error);
+      }
+    };
+    
+    updateGeminiApiKey();
   }, [geminiApiKey, toast]);
 
   if (!deck || filteredCards.length === 0) {

@@ -1,5 +1,6 @@
+// Session key management utilities with IndexedDB
 
-// Session key management utilities
+import * as idb from './enhancedIndexedDB';
 
 // Storage key constant
 const STORAGE_KEY = "cds-flashcard-session-key";
@@ -16,41 +17,43 @@ export const generateSessionKey = (): string => {
          Math.random().toString(36).substring(2, 4).toUpperCase();
 };
 
-// Save session key to localStorage with expiration
-export const saveSessionKey = (key: string): void => {
-  localStorage.setItem(STORAGE_KEY, key);
+// Save session key to IndexedDB with expiration
+export const saveSessionKey = async (key: string): Promise<void> => {
+  await idb.setItem(STORAGE_KEY, key);
   
   // Set session expiry
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + SESSION_DURATION_DAYS);
-  localStorage.setItem(SESSION_EXPIRY_KEY, expiryDate.toISOString());
+  await idb.setItem(SESSION_EXPIRY_KEY, expiryDate.toISOString());
   
   // Initialize user data for this session if not already present
-  initializeUserDataForSession(key);
+  await initializeUserDataForSession(key);
   
   // Record last activity
-  updateLastActivity();
+  await updateLastActivity();
 };
 
-// Get session key from localStorage
-export const getSessionKey = (): string | null => {
-  return localStorage.getItem(STORAGE_KEY);
+// Get session key from IndexedDB
+export const getSessionKey = async (): Promise<string | null> => {
+  return await idb.getItem(STORAGE_KEY);
 };
 
 // Remove session key (logout)
-export const clearSessionKey = (): void => {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(SESSION_EXPIRY_KEY);
+export const clearSessionKey = async (): Promise<void> => {
+  await idb.removeItemByKey(STORAGE_KEY);
+  await idb.removeItemByKey(SESSION_EXPIRY_KEY);
 };
 
 // Check if a session exists
-export const hasSession = (): boolean => {
-  return !!getSessionKey() && !isSessionExpired();
+export const hasSession = async (): Promise<boolean> => {
+  const sessionKey = await getSessionKey();
+  const expired = await isSessionExpired();
+  return !!sessionKey && !expired;
 };
 
 // Check if the session is expired
-export const isSessionExpired = (): boolean => {
-  const expiryDateString = localStorage.getItem(SESSION_EXPIRY_KEY);
+export const isSessionExpired = async (): Promise<boolean> => {
+  const expiryDateString = await idb.getItem(SESSION_EXPIRY_KEY);
   if (!expiryDateString) return false; // No expiry set, assume not expired
   
   const expiryDate = new Date(expiryDateString);
@@ -60,71 +63,72 @@ export const isSessionExpired = (): boolean => {
 };
 
 // Extend session validity
-export const extendSession = (): void => {
-  const sessionKey = getSessionKey();
+export const extendSession = async (): Promise<void> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) return;
   
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + SESSION_DURATION_DAYS);
-  localStorage.setItem(SESSION_EXPIRY_KEY, expiryDate.toISOString());
+  await idb.setItem(SESSION_EXPIRY_KEY, expiryDate.toISOString());
   
   // Update last activity timestamp
-  updateLastActivity();
+  await updateLastActivity();
 };
 
 // Track last user activity
-export const updateLastActivity = (): void => {
-  const sessionKey = getSessionKey();
+export const updateLastActivity = async (): Promise<void> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) return;
   
-  localStorage.setItem(
+  await idb.setItem(
     `${USER_DATA_PREFIX}${sessionKey}${LAST_ACTIVITY_KEY_SUFFIX}`, 
     new Date().toISOString()
   );
   
   // Update stats with this activity
-  updateSessionStats({ lastActive: new Date().toISOString() });
+  await updateSessionStats({ lastActive: new Date().toISOString() });
 };
 
 // Verify if session is valid (in a real app this would check against a backend)
-export const verifySession = (): boolean => {
-  const sessionKey = getSessionKey();
+export const verifySession = async (): Promise<boolean> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) return false;
-  if (isSessionExpired()) {
-    clearSessionKey();
+  if (await isSessionExpired()) {
+    await clearSessionKey();
     return false;
   }
   
   // In a real app, this would validate the session key with a backend
   // For this demo, we'll just check if it follows our expected format
   const isValidFormat = /^[A-Z0-9]{12,14}$/.test(sessionKey);
-  const hasUserData = getUserDataKeys(sessionKey).length > 0;
+  const userDataKeys = await getUserDataKeys(sessionKey);
+  const hasUserData = userDataKeys.length > 0;
   
   // Extend session validity if it's valid
   if (isValidFormat) {
-    extendSession();
-    updateLastActivity();
+    await extendSession();
+    await updateLastActivity();
   }
   
   return isValidFormat;
 };
 
 // Initialize user data for a new session
-const initializeUserDataForSession = (sessionKey: string): void => {
+const initializeUserDataForSession = async (sessionKey: string): Promise<void> => {
   // Check if this is a new session without data
-  const userDataKeys = getUserDataKeys(sessionKey);
+  const userDataKeys = await getUserDataKeys(sessionKey);
   if (userDataKeys.length === 0) {
     // Initialize with empty data structures
-    localStorage.setItem(`${USER_DATA_PREFIX}${sessionKey}_decks`, JSON.stringify([]));
-    localStorage.setItem(`${USER_DATA_PREFIX}${sessionKey}_themes`, JSON.stringify([]));
-    localStorage.setItem(`${USER_DATA_PREFIX}${sessionKey}_flashcards`, JSON.stringify([]));
-    localStorage.setItem(`${USER_DATA_PREFIX}${sessionKey}_profile`, JSON.stringify({
+    await idb.setItem(`${USER_DATA_PREFIX}${sessionKey}_decks`, JSON.stringify([]));
+    await idb.setItem(`${USER_DATA_PREFIX}${sessionKey}_themes`, JSON.stringify([]));
+    await idb.setItem(`${USER_DATA_PREFIX}${sessionKey}_flashcards`, JSON.stringify([]));
+    await idb.setItem(`${USER_DATA_PREFIX}${sessionKey}_profile`, JSON.stringify({
       name: "Utilisateur",
       createdAt: new Date().toISOString()
     }));
     
     // Initialize session statistics
-    initializeSessionStats(sessionKey);
+    await initializeSessionStats(sessionKey);
     
     console.log(`New session initialized: ${sessionKey}`);
   } else {
@@ -132,14 +136,15 @@ const initializeUserDataForSession = (sessionKey: string): void => {
     
     // Make sure stats exist for existing sessions
     const statsKey = `${USER_DATA_PREFIX}${sessionKey}${STATS_KEY_SUFFIX}`;
-    if (!localStorage.getItem(statsKey)) {
-      initializeSessionStats(sessionKey);
+    const statsData = await idb.getItem(statsKey);
+    if (!statsData) {
+      await initializeSessionStats(sessionKey);
     }
   }
 };
 
 // Initialize session statistics
-const initializeSessionStats = (sessionKey: string): void => {
+const initializeSessionStats = async (sessionKey: string): Promise<void> => {
   const statsKey = `${USER_DATA_PREFIX}${sessionKey}${STATS_KEY_SUFFIX}`;
   const initialStats = {
     createdAt: new Date().toISOString(),
@@ -155,16 +160,16 @@ const initializeSessionStats = (sessionKey: string): void => {
     averageScore: 0
   };
   
-  localStorage.setItem(statsKey, JSON.stringify(initialStats));
+  await idb.setItem(statsKey, JSON.stringify(initialStats));
 };
 
 // Update session statistics
-export const updateSessionStats = (updates: Record<string, any>): void => {
-  const sessionKey = getSessionKey();
+export const updateSessionStats = async (updates: Record<string, any>): Promise<void> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) return;
   
   const statsKey = `${USER_DATA_PREFIX}${sessionKey}${STATS_KEY_SUFFIX}`;
-  const statsData = localStorage.getItem(statsKey);
+  const statsData = await idb.getItem(statsKey);
   
   if (statsData) {
     try {
@@ -200,24 +205,24 @@ export const updateSessionStats = (updates: Record<string, any>): void => {
         }
       }
       
-      localStorage.setItem(statsKey, JSON.stringify(updatedStats));
+      await idb.setItem(statsKey, JSON.stringify(updatedStats));
     } catch (error) {
       console.error("Error updating stats:", error);
     }
   } else {
     // Initialize stats if they don't exist
-    initializeSessionStats(sessionKey);
-    updateSessionStats(updates);
+    await initializeSessionStats(sessionKey);
+    await updateSessionStats(updates);
   }
 };
 
 // Get session statistics
-export const getSessionStats = (): Record<string, any> | null => {
-  const sessionKey = getSessionKey();
+export const getSessionStats = async (): Promise<Record<string, any> | null> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) return null;
   
   const statsKey = `${USER_DATA_PREFIX}${sessionKey}${STATS_KEY_SUFFIX}`;
-  const statsData = localStorage.getItem(statsKey);
+  const statsData = await idb.getItem(statsKey);
   
   if (statsData) {
     try {
@@ -231,21 +236,15 @@ export const getSessionStats = (): Record<string, any> | null => {
   return null;
 };
 
-// Get all localStorage keys associated with a session
-const getUserDataKeys = (sessionKey: string): string[] => {
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(`${USER_DATA_PREFIX}${sessionKey}`)) {
-      keys.push(key);
-    }
-  }
-  return keys;
+// Get all IndexedDB keys associated with a session
+const getUserDataKeys = async (sessionKey: string): Promise<string[]> => {
+  const allKeys = await idb.getAllKeys();
+  return allKeys.filter(key => key.startsWith(`${USER_DATA_PREFIX}${sessionKey}`));
 };
 
-// Get all localStorage data for export
-export const exportSessionData = (): string => {
-  const sessionKey = getSessionKey();
+// Get all IndexedDB data for export
+export const exportSessionData = async (): Promise<string> => {
+  const sessionKey = await getSessionKey();
   if (!sessionKey) {
     throw new Error("No active session found");
   }
@@ -256,14 +255,14 @@ export const exportSessionData = (): string => {
     exportDate: new Date().toISOString(),
     userData: {},
     appData: {}, // App-specific data like decks, themes, etc.
-    stats: getSessionStats()
+    stats: await getSessionStats()
   };
   
   // Get all session-specific user data
-  const userDataKeys = getUserDataKeys(sessionKey);
-  userDataKeys.forEach(key => {
+  const userDataKeys = await getUserDataKeys(sessionKey);
+  for (const key of userDataKeys) {
     const keyName = key.replace(`${USER_DATA_PREFIX}${sessionKey}_`, '');
-    const value = localStorage.getItem(key);
+    const value = await idb.getItem(key);
     if (value) {
       try {
         exportData.userData[keyName] = JSON.parse(value);
@@ -271,12 +270,12 @@ export const exportSessionData = (): string => {
         exportData.userData[keyName] = value;
       }
     }
-  });
+  }
   
   // Also export app-specific data
   const appDataKeys = ['cds-flashcard-decks', 'cds-flashcard-themes', 'cds-flashcard-cards', 'cds-flashcard-user'];
-  appDataKeys.forEach(key => {
-    const value = localStorage.getItem(key);
+  for (const key of appDataKeys) {
+    const value = await idb.getItem(key);
     if (value) {
       try {
         exportData.appData[key] = JSON.parse(value);
@@ -284,13 +283,13 @@ export const exportSessionData = (): string => {
         exportData.appData[key] = value;
       }
     }
-  });
+  }
   
   return JSON.stringify(exportData, null, 2);
 };
 
 // Import session data
-export const importSessionData = (data: string): boolean => {
+export const importSessionData = async (data: string): Promise<boolean> => {
   try {
     // Parse the imported data
     const importData = JSON.parse(data);
@@ -302,28 +301,28 @@ export const importSessionData = (data: string): boolean => {
     }
     
     // Import the session key
-    saveSessionKey(importData.sessionKey);
+    await saveSessionKey(importData.sessionKey);
     
     // Import all user data
-    Object.entries(importData.userData).forEach(([key, value]) => {
-      localStorage.setItem(
+    for (const [key, value] of Object.entries(importData.userData)) {
+      await idb.setItem(
         `${USER_DATA_PREFIX}${importData.sessionKey}_${key}`,
         typeof value === 'string' ? value : JSON.stringify(value)
       );
-    });
+    }
     
     // Import app data
-    Object.entries(importData.appData).forEach(([key, value]) => {
-      localStorage.setItem(
+    for (const [key, value] of Object.entries(importData.appData)) {
+      await idb.setItem(
         key,
         typeof value === 'string' ? value : JSON.stringify(value)
       );
-    });
+    }
     
     // If stats are present in the import, update them
     if (importData.stats) {
       const statsKey = `${USER_DATA_PREFIX}${importData.sessionKey}${STATS_KEY_SUFFIX}`;
-      localStorage.setItem(statsKey, JSON.stringify(importData.stats));
+      await idb.setItem(statsKey, JSON.stringify(importData.stats));
     }
     
     console.log("Session data successfully imported");
@@ -335,19 +334,19 @@ export const importSessionData = (data: string): boolean => {
 };
 
 // Link user data to session key
-export const linkUserDataToSession = (sessionKey: string): void => {
+export const linkUserDataToSession = async (sessionKey: string): Promise<void> => {
   // In a real-world scenario, this would be handled by a backend service
-  // For now, we're using localStorage as our "database"
+  // For now, we're using IndexedDB as our "database"
   
   // Make sure the session is initialized
-  initializeUserDataForSession(sessionKey);
+  await initializeUserDataForSession(sessionKey);
   
   console.log(`User data linked to session: ${sessionKey}`);
 };
 
 // Get remaining session time in days
-export const getSessionRemainingDays = (): number | null => {
-  const expiryDateString = localStorage.getItem(SESSION_EXPIRY_KEY);
+export const getSessionRemainingDays = async (): Promise<number | null> => {
+  const expiryDateString = await idb.getItem(SESSION_EXPIRY_KEY);
   if (!expiryDateString) return null;
   
   const expiryDate = new Date(expiryDateString);
@@ -361,8 +360,8 @@ export const getSessionRemainingDays = (): number | null => {
 };
 
 // Update the statistics when studying cards
-export const recordCardStudy = (isCorrect: boolean, studyTimeMinutes: number = 1): void => {
-  updateSessionStats({
+export const recordCardStudy = async (isCorrect: boolean, studyTimeMinutes: number = 1): Promise<void> => {
+  await updateSessionStats({
     cardsReviewed: 1, // Increment by 1
     correctAnswers: isCorrect ? 1 : 0,
     incorrectAnswers: isCorrect ? 0 : 1,
@@ -373,7 +372,64 @@ export const recordCardStudy = (isCorrect: boolean, studyTimeMinutes: number = 1
 };
 
 // Get study streak
-export const getStudyStreak = (): number => {
-  const stats = getSessionStats();
+export const getStudyStreak = async (): Promise<number> => {
+  const stats = await getSessionStats();
   return stats?.streakDays || 0;
+};
+
+// Fonctions synchrones pour compatibilité avec le code existant
+// Ces fonctions n'attendent pas les promesses et retournent des valeurs par défaut
+// pour faciliter la transition vers la version asynchrone
+export const getSessionKeySync = (): string | null => {
+  let result: string | null = null;
+  getSessionKey().then(key => { result = key; });
+  return result;
+};
+
+export const hasSessionSync = (): boolean => {
+  let result = false;
+  hasSession().then(has => { result = has; });
+  return result;
+};
+
+export const isSessionExpiredSync = (): boolean => {
+  let result = false;
+  isSessionExpired().then(expired => { result = expired; });
+  return result;
+};
+
+export const verifySessionSync = (): boolean => {
+  let result = false;
+  verifySession().then(valid => { result = valid; });
+  return result;
+};
+
+export const getSessionStatsSync = (): Record<string, any> | null => {
+  let result: Record<string, any> | null = null;
+  getSessionStats().then(stats => { result = stats; });
+  return result;
+};
+
+export const getStudyStreakSync = (): number => {
+  let result = 0;
+  getStudyStreak().then(streak => { result = streak; });
+  return result;
+};
+
+export const getSessionRemainingDaysSync = (): number | null => {
+  let result: number | null = null;
+  getSessionRemainingDays().then(days => { result = days; });
+  return result;
+};
+
+export const recordCardStudySync = (isCorrect: boolean, studyTimeMinutes: number = 1): void => {
+  recordCardStudy(isCorrect, studyTimeMinutes).catch(error => {
+    console.error("Error in recordCardStudySync:", error);
+  });
+};
+
+export const updateSessionStatsSync = (updates: Record<string, any>): void => {
+  updateSessionStats(updates).catch(error => {
+    console.error("Error in updateSessionStatsSync:", error);
+  });
 };

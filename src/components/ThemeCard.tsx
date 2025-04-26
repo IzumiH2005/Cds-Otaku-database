@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Layers, ArrowRight, Edit, Trash2, Save } from "lucide-react";
 import { Link } from "react-router-dom";
-import { updateTheme, deleteTheme, Theme } from "@/lib/localStorage";
+import { updateThemeSync as updateTheme, deleteThemeSync as deleteTheme, Theme } from "@/lib/localStorage";
 
 export interface ThemeCardProps {
   id: string;

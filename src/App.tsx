@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-import { generateSampleData } from "./lib/localStorage";
-import { hasSession } from "./lib/sessionManager";
+import { generateSampleDataSync as generateSampleData } from "./lib/storageCompatLayer";
+import { hasSessionSync as hasSession } from "./lib/sessionManager";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -28,6 +28,7 @@ import LearningMethodsPage from "@/pages/LearningMethodsPage";
 import StatsPage from "@/pages/StatsPage";
 import SharePage from "@/pages/SharePage";
 import MyDecksPage from "@/pages/MyDecksPage";
+import TestIndexedDBPage from "@/pages/TestIndexedDBPage";
 
 const queryClient = new QueryClient();
 
@@ -226,6 +227,16 @@ const App = () => {
                     <Footer />
                   </>
                 </ProtectedRoute>
+              } />
+              
+              <Route path="/test-indexeddb" element={
+                <>
+                  <Navbar />
+                  <main className="flex-1">
+                    <TestIndexedDBPage />
+                  </main>
+                  <Footer />
+                </>
               } />
               
               <Route path="*" element={<NotFound />} />

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, Save, X } from "lucide-react";
-import { updateFlashcard, deleteFlashcard, Flashcard, getBase64 } from "@/lib/localStorage";
+import { updateFlashcardSync as updateFlashcard, deleteFlashcardSync as deleteFlashcard, Flashcard, getBase64Sync as getBase64 } from "@/lib/localStorage";
 import FlashCard from "./FlashCard";
 
 interface FlashCardItemProps {
@@ -39,7 +39,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     },
   });
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -53,7 +53,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         return;
       }
 
-      const base64 = await getBase64(file);
+      const base64 = getBase64(file);
       if (side === 'front') {
         setEditingCard({
           ...editingCard,
@@ -75,7 +75,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -98,7 +98,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         return;
       }
 
-      const base64 = await getBase64(file);
+      const base64 = getBase64(file);
       if (side === 'front') {
         setEditingCard({
           ...editingCard,
