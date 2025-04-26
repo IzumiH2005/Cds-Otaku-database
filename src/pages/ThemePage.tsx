@@ -465,11 +465,15 @@ const ThemePage = () => {
                 </div>
                 {newCard.front.image && (
                   <div className="mt-2 relative">
-                    <div className="text-xs">Aucun fichier choisi</div>
+                    <img 
+                      src={newCard.front.image} 
+                      alt="Image prévisualisation"
+                      className="max-h-32 max-w-full rounded-md"
+                    />
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
+                      className="absolute top-1 right-1 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         front: { ...newCard.front, image: undefined },
@@ -494,11 +498,14 @@ const ThemePage = () => {
                 </div>
                 {newCard.front.audio && (
                   <div className="mt-2 relative">
-                    <div className="text-xs">Aucun fichier choisi</div>
+                    <audio className="w-full h-8" controls>
+                      <source src={newCard.front.audio} />
+                      Votre navigateur ne supporte pas l'élément audio.
+                    </audio>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
+                      className="absolute -top-1 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         front: { ...newCard.front, audio: undefined },
@@ -576,11 +583,15 @@ const ThemePage = () => {
                 </div>
                 {newCard.back.image && (
                   <div className="mt-2 relative">
-                    <div className="text-xs">Aucun fichier choisi</div>
+                    <img 
+                      src={newCard.back.image} 
+                      alt="Image prévisualisation"
+                      className="max-h-32 max-w-full rounded-md"
+                    />
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
+                      className="absolute top-1 right-1 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         back: { ...newCard.back, image: undefined },
@@ -605,11 +616,14 @@ const ThemePage = () => {
                 </div>
                 {newCard.back.audio && (
                   <div className="mt-2 relative">
-                    <div className="text-xs">Aucun fichier choisi</div>
+                    <audio className="w-full h-8" controls>
+                      <source src={newCard.back.audio} />
+                      Votre navigateur ne supporte pas l'élément audio.
+                    </audio>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute top-0 right-2 w-4 h-4 rounded-full"
+                      className="absolute -top-1 right-2 w-4 h-4 rounded-full"
                       onClick={() => setNewCard({
                         ...newCard,
                         back: { ...newCard.back, audio: undefined },
