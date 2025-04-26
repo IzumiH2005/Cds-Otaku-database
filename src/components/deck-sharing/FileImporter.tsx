@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileUp, RefreshCcw } from "lucide-react";
-import { importDeckFromJson, updateDeckFromJson, getUser, SharedDeckExport } from "@/lib/localStorage";
+import { importDeckFromJson, updateDeckFromJson, getUser } from "@/lib/storageCompatLayer";
+import type { SharedDeckExport } from "@/lib/localStorage";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileImporterProps {
@@ -23,7 +24,7 @@ const FileImporter = ({ onClose }: FileImporterProps) => {
   const validateDeckJson = (jsonString: string): SharedDeckExport | null => {
     try {
       const data = JSON.parse(jsonString);
-      if (!data.id || !data.originalId || !data.title || !Array.isArray(data.themes) || !Array.isArray(data.flashcards)) {
+      if (!data.deck || !data.deck.id || !Array.isArray(data.themes) || !Array.isArray(data.flashcards)) {
         setImportError("Format de deck invalide");
         return null;
       }
