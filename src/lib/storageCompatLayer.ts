@@ -1,196 +1,63 @@
 /**
  * Couche de compatibilité entre localStorage et IndexedDB
- * Ce fichier fournit des fonctions synchrones pour les composants qui n'ont pas été mis à jour
- * pour utiliser les versions asynchrones des fonctions de stockage.
+ * AVERTISSEMENT : Ce fichier fournit des fonctions synchrones simplifiées
+ * qui retournent des valeurs par défaut. Il est recommandé d'utiliser
+ * directement les fonctions asynchrones de enhancedIndexedDB.ts
  */
 
-import {
-  User, Deck, Theme, Flashcard, SharedDeckExport,
-  getUser, getDecks, getDeck, getThemes, getThemesByDeck, getFlashcards, getFlashcardsByDeck,
-  getFlashcardsByTheme, getFlashcard, getTheme, getSharedDeckCodes, getSharedDeck,
-  getSharedImportedDecks, isSharedImportedDeck, getOriginalDeckIdForImported,
-  setUser, updateUser, createDeck, updateDeck, deleteDeck, createTheme, updateTheme,
-  deleteTheme, createFlashcard, updateFlashcard, deleteFlashcard, createShareCode,
-  exportDeckToJson, importDeckFromJson, updateDeckFromJson, publishDeck, unpublishDeck,
-  updatePublishedDeck, getBase64, generateSampleData
+import { User, Deck, Theme, Flashcard } from './localStorage';
+
+// Exports pour maintenir la compatibilité avec le code existant
+export { 
+  User, Deck, Theme, Flashcard
 } from './localStorage';
 
-// Fonctions de compatibilité synchrone
-export { getUserSync as getUser } from './localStorage';
-export { getDecksSync as getDecks } from './localStorage';
-export { getDeckSync as getDeck } from './localStorage';
-export { getThemesSync as getThemes } from './localStorage';
-export { getThemesByDeckSync as getThemesByDeck } from './localStorage';
-export { getFlashcardsSync as getFlashcards } from './localStorage';
-export { getFlashcardsByDeckSync as getFlashcardsByDeck } from './localStorage';
+// Fonctions synchrones simplifiées qui retournent des valeurs par défaut
+export const getUser = (): User | null => null;
+export const getDecks = (): Deck[] => [];
+export const getDeck = (id: string): Deck | null => null;
+export const getThemes = (): Theme[] => [];
+export const getThemesByDeck = (deckId: string): Theme[] => [];
+export const getFlashcards = (): Flashcard[] => [];
+export const getFlashcardsByDeck = (deckId: string): Flashcard[] => [];
+export const getFlashcardsByTheme = (themeId: string): Flashcard[] => [];
+export const getFlashcard = (id: string): Flashcard | undefined => undefined;
+export const getTheme = (id: string): Theme | undefined => undefined;
+export const getSharedDeckCodes = (): { code: string, deckId: string, expiresAt?: string }[] => [];
+export const getSharedDeck = (code: string): Deck | undefined => undefined;
+export const getSharedImportedDecks = (): {originalId: string, localDeckId: string}[] => [];
+export const isSharedImportedDeck = (deckId: string): boolean => false;
+export const getOriginalDeckIdForImported = (deckId: string): string | null => null;
 
-// Fonctions asynchrones avec wrappers synchrones
-export const getFlashcardsByThemeSync = (themeId: string): Flashcard[] => {
-  let result: Flashcard[] = [];
-  getFlashcardsByTheme(themeId).then(cards => { result = cards; });
-  return result;
-};
+// Fonctions d'écriture qui ne font rien
+export const setUser = (user: User): void => {};
+export const updateUser = (userData: Partial<User>): User | null => null;
+export const createDeck = (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Deck | null => null;
+export const updateDeck = (id: string, deckData: Partial<Deck>): Deck | null => null;
+export const deleteDeck = (id: string): boolean => false;
+export const createTheme = (theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>): Theme | null => null;
+export const updateTheme = (id: string, themeData: Partial<Theme>): Theme | null => null;
+export const deleteTheme = (id: string): boolean => false;
+export const createFlashcard = (card: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard | null => null;
+export const updateFlashcard = (id: string, cardData: Partial<Flashcard>): Flashcard | null => null;
+export const deleteFlashcard = (id: string): boolean => false;
+export const createShareCode = (deckId: string): string => "";
 
-export const getFlashcardSync = (id: string): Flashcard | undefined => {
-  let result: Flashcard | undefined = undefined;
-  getFlashcard(id).then(card => { result = card; });
-  return result;
-};
+// Type pour l'exportation partagée
+export interface SharedDeckExport {
+  deck: Deck;
+  themes: Theme[];
+  flashcards: Flashcard[];
+  exportDate: string;
+  version: string;
+}
 
-export const getThemeSync = (id: string): Theme | undefined => {
-  let result: Theme | undefined = undefined;
-  getTheme(id).then(theme => { result = theme; });
-  return result;
-};
-
-export const getSharedDeckCodesSync = (): { code: string, deckId: string, expiresAt?: string }[] => {
-  let result: { code: string, deckId: string, expiresAt?: string }[] = [];
-  getSharedDeckCodes().then(codes => { result = codes; });
-  return result;
-};
-
-export const getSharedDeckSync = (code: string): Deck | undefined => {
-  let result: Deck | undefined = undefined;
-  getSharedDeck(code).then(deck => { result = deck; });
-  return result;
-};
-
-export const getSharedImportedDecksSync = (): {originalId: string, localDeckId: string}[] => {
-  let result: {originalId: string, localDeckId: string}[] = [];
-  getSharedImportedDecks().then(decks => { result = decks; });
-  return result;
-};
-
-export const isSharedImportedDeckSync = (deckId: string): boolean => {
-  let result = false;
-  isSharedImportedDeck(deckId).then(isImported => { result = isImported; });
-  return result;
-};
-
-export const getOriginalDeckIdForImportedSync = (deckId: string): string | null => {
-  let result: string | null = null;
-  getOriginalDeckIdForImported(deckId).then(id => { result = id; });
-  return result;
-};
-
-// Fonctions d'écriture
-export const setUserSync = (user: User): void => {
-  setUser(user).catch(error => {
-    console.error("Error in setUserSync:", error);
-  });
-};
-
-export const updateUserSync = (userData: Partial<User>): User | null => {
-  let result: User | null = null;
-  updateUser(userData).then(user => { result = user; });
-  return result;
-};
-
-export const createDeckSync = (deck: Omit<Deck, 'id' | 'createdAt' | 'updatedAt'>): Deck | null => {
-  let result: Deck | null = null;
-  createDeck(deck).then(newDeck => { result = newDeck; });
-  return result;
-};
-
-export const updateDeckSync = (id: string, deckData: Partial<Deck>): Deck | null => {
-  let result: Deck | null = null;
-  updateDeck(id, deckData).then(updatedDeck => { result = updatedDeck; });
-  return result;
-};
-
-export const deleteDeckSync = (id: string): boolean => {
-  let result = false;
-  deleteDeck(id).then(success => { result = success; });
-  return result;
-};
-
-export const createThemeSync = (theme: Omit<Theme, 'id' | 'createdAt' | 'updatedAt'>): Theme | null => {
-  let result: Theme | null = null;
-  createTheme(theme).then(newTheme => { result = newTheme; });
-  return result;
-};
-
-export const updateThemeSync = (id: string, themeData: Partial<Theme>): Theme | null => {
-  let result: Theme | null = null;
-  updateTheme(id, themeData).then(updatedTheme => { result = updatedTheme; });
-  return result;
-};
-
-export const deleteThemeSync = (id: string): boolean => {
-  let result = false;
-  deleteTheme(id).then(success => { result = success; });
-  return result;
-};
-
-export const createFlashcardSync = (flashcard: Omit<Flashcard, 'id' | 'createdAt' | 'updatedAt'>): Flashcard | null => {
-  let result: Flashcard | null = null;
-  createFlashcard(flashcard).then(newCard => { result = newCard; });
-  return result;
-};
-
-export const updateFlashcardSync = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
-  let result: Flashcard | null = null;
-  updateFlashcard(id, cardData).then(updatedCard => { result = updatedCard; });
-  return result;
-};
-
-export const deleteFlashcardSync = (id: string): boolean => {
-  let result = false;
-  deleteFlashcard(id).then(success => { result = success; });
-  return result;
-};
-
-export const createShareCodeSync = (deckId: string, expiresInDays?: number): string => {
-  let result = "";
-  createShareCode(deckId, expiresInDays).then(code => { result = code; });
-  return result;
-};
-
-export const exportDeckToJsonSync = (deckId: string): SharedDeckExport | null => {
-  let result: SharedDeckExport | null = null;
-  exportDeckToJson(deckId).then(exported => { result = exported; });
-  return result;
-};
-
-export const importDeckFromJsonSync = (sharedDeckData: SharedDeckExport, authorId: string): string => {
-  let result = "";
-  importDeckFromJson(sharedDeckData, authorId).then(id => { result = id; });
-  return result;
-};
-
-export const updateDeckFromJsonSync = (sharedDeckData: SharedDeckExport): boolean => {
-  let result = false;
-  updateDeckFromJson(sharedDeckData).then(success => { result = success; });
-  return result;
-};
-
-export const publishDeckSync = (deckId: string): boolean => {
-  let result = false;
-  publishDeck(deckId).then(success => { result = success; });
-  return result;
-};
-
-export const unpublishDeckSync = (deckId: string): boolean => {
-  let result = false;
-  unpublishDeck(deckId).then(success => { result = success; });
-  return result;
-};
-
-export const updatePublishedDeckSync = (deckId: string, deckData: Partial<Deck>): Deck | null => {
-  let result: Deck | null = null;
-  updatePublishedDeck(deckId, deckData).then(updatedDeck => { result = updatedDeck; });
-  return result;
-};
-
-export const generateSampleDataSync = (): void => {
-  generateSampleData().catch(error => {
-    console.error("Error generating sample data:", error);
-  });
-};
-export { generateSampleDataSync as generateSampleData };
-
-// Réexporter les types pour faciliter l'importation
-export type { User, Deck, Theme, Flashcard, SharedDeckExport };
-
-// Réexporter les fonctions utilitaires non-liées au stockage
-export { getBase64 };
+// Fonctions d'exportation/importation qui ne font rien
+export const exportDeckToJson = (deckId: string): SharedDeckExport | null => null;
+export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: string): string => "";
+export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean => false;
+export const publishDeck = (deckId: string): boolean => false;
+export const unpublishDeck = (deckId: string): boolean => false;
+export const updatePublishedDeck = (deckId: string, deckData: Partial<Deck>): Deck | null => null;
+export const getBase64 = (file: File): string => "";
+export const generateSampleData = (): void => {};
