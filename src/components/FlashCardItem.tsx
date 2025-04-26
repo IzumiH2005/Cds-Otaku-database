@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, Save, X } from "lucide-react";
-import { updateFlashcard, deleteFlashcard, Flashcard, getBase64 } from "@/lib/localStorage";
+import { updateFlashcard, deleteFlashcard } from "@/lib/storageAdapter";
+import { getBase64, Flashcard } from "@/lib/localStorage";
 import FlashCard from "./FlashCard";
 
 interface FlashCardItemProps {
@@ -120,7 +121,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingCard.front.text.trim() && !editingCard.front.image) {
       toast({
         title: "Contenu requis",
@@ -154,18 +155,21 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
       };
 
-      const updated = updateFlashcard(card.id, {
+      const updated = await updateFlashcard(card.id, {
         front: updatedFront,
         back: updatedBack,
       });
 
       if (updated) {
         setShowEditDialog(false);
-        onUpdate?.(updated);
+        // Convertir la Promise en Flashcard avec "as Flashcard"
+        onUpdate?.(updated as Flashcard);
         toast({
           title: "Carte mise à jour",
           description: "La flashcard a été modifiée avec succès",
         });
+      } else {
+        throw new Error("La mise à jour a échoué");
       }
     } catch (error) {
       console.error("Error updating flashcard:", error);
@@ -177,9 +181,9 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-      const success = deleteFlashcard(card.id);
+      const success = await deleteFlashcard(card.id);
       if (success) {
         setShowDeleteDialog(false);
         onDelete?.();
@@ -187,6 +191,8 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
           title: "Carte supprimée",
           description: "La flashcard a été supprimée avec succès",
         });
+      } else {
+        throw new Error("La suppression a échoué");
       }
     } catch (error) {
       console.error("Error deleting flashcard:", error);
