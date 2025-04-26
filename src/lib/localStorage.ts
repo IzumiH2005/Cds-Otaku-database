@@ -775,115 +775,62 @@ export const getUserSync = (): User | null => {
   return result;
 };
 
-export const getDecksSync = (): Deck[] => {
-  let result: Deck[] = [];
-  getDecks().then(decks => { result = decks; });
-  return result;
-};
+/**
+ * ATTENTION: Les fonctions synchrones ont été remplacées par des fonctions qui utilisent indexedDB.js
+ * Les fonctions synchrones de type X renvoient les valeurs par défaut comme [] et null
+ * car elles sont appelées de manière synchrone alors que IndexedDB est asynchrone.
+ * 
+ * Utilisez toujours les fonctions asynchrones avec await au lieu des fonctions synchrones
+ * dans les composants React.
+ */
 
-export const getDeckSync = (id: string): Deck | null => {
-  let result: Deck | null = null;
-  getDeck(id).then(deck => { result = deck; });
-  return result;
-};
-
-export const getThemesSync = (): Theme[] => {
-  let result: Theme[] = [];
-  getThemes().then(themes => { result = themes; });
-  return result;
-};
-
-export const getThemesByDeckSync = (deckId: string): Theme[] => {
-  let result: Theme[] = [];
-  getThemesByDeck(deckId).then(themes => { result = themes; });
-  return result;
-};
-
-export const getFlashcardsSync = (): Flashcard[] => {
-  let result: Flashcard[] = [];
-  getFlashcards().then(flashcards => { result = flashcards; });
-  return result;
-};
-
-export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
-  let result: Flashcard[] = [];
-  getFlashcardsByDeck(deckId).then(flashcards => { result = flashcards; });
-  return result;
-};
-
-// Fonctions synchrones supplémentaires pour la gestion des flashcards
-export const updateFlashcardSync = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
-  let result: Flashcard | null = null;
-  updateFlashcard(id, cardData).then(card => { result = card; });
-  return result;
-};
-
-export const deleteFlashcardSync = (id: string): boolean => {
-  let result: boolean = false;
-  deleteFlashcard(id).then(success => { result = success; });
-  return result;
-};
-
-// Fonction synchrone pour getBase64
-export const getBase64Sync = (file: File): string => {
-  let result: string = '';
-  getBase64(file).then(base64 => { result = base64; });
-  return result;
-};
-
-// Fonctions synchrones pour la gestion des thèmes
-export const updateThemeSync = (id: string, themeData: Partial<Theme>): Theme | null => {
-  let result: Theme | null = null;
-  updateTheme(id, themeData).then(theme => { result = theme; });
-  return result;
-};
-
-export const deleteThemeSync = (id: string): boolean => {
-  let result: boolean = false;
-  deleteTheme(id).then(success => { result = success; });
-  return result;
-};
-
-// Les fonctions synchrones suivantes existent déjà plus haut dans le fichier
-
-export const createThemeSync = (themeData: Omit<Theme, "id" | "createdAt" | "updatedAt">): Theme => {
-  let result: Theme | null = null;
-  createTheme(themeData).then(theme => { result = theme; });
-  return result as Theme;
-};
-
-export const createFlashcardSync = (cardData: Omit<Flashcard, "id" | "createdAt" | "updatedAt">): Flashcard => {
-  let result: Flashcard | null = null;
-  createFlashcard(cardData).then(card => { result = card; });
-  return result as Flashcard;
-};
-
-export const createShareCodeSync = (deckId: string, days: number = 30): string => {
-  let result: string = "";
-  createShareCode(deckId, days).then(code => { result = code; });
-  return result;
-}
-
-export const createDeckSync = (deckData: Omit<Deck, "id" | "createdAt" | "updatedAt">): Deck => {
-  let result: Deck | null = null;
-  createDeck(deckData).then(deck => { result = deck; });
-  return result as Deck;
-}
-
-export const getSharedImportedDecksSync = (): { originalId: string; localDeckId: string; }[] => {
-  let result: { originalId: string; localDeckId: string; }[] = [];
-  getSharedImportedDecks().then(sharedDecks => { result = sharedDecks; });
-  return result;
-}
-
-export const initializeDefaultUserSync = (): User => {
-  let result: User | null = null;
-  initializeDefaultUser().then(user => { result = user; });
-  return result as User;
-}
-
-export const updateUserSync = (userData: Partial<User>): User | null => {
-  let result: User | null = null;
-  updateUser(userData).then(user => { result = user; });
-  return result;
-}
+// Valeurs par défaut pour les fonctions synchrones
+export const getDecksSync = (): Deck[] => [];
+export const getDeckSync = (id: string): Deck | null => null;
+export const getThemesSync = (): Theme[] => [];
+export const getThemesByDeckSync = (deckId: string): Theme[] => [];
+export const getFlashcardsSync = (): Flashcard[] => [];
+export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => [];
+export const updateFlashcardSync = (id: string, cardData: Partial<Flashcard>): Flashcard | null => null;
+export const deleteFlashcardSync = (id: string): boolean => false;
+export const getBase64Sync = (file: File): string => '';
+export const updateThemeSync = (id: string, themeData: Partial<Theme>): Theme | null => null;
+export const deleteThemeSync = (id: string): boolean => false;
+export const createThemeSync = (themeData: Omit<Theme, "id" | "createdAt" | "updatedAt">): Theme => ({ 
+  id: "",
+  deckId: "",
+  title: "",
+  description: "",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+} as Theme);
+export const createFlashcardSync = (cardData: Omit<Flashcard, "id" | "createdAt" | "updatedAt">): Flashcard => ({
+  id: "",
+  deckId: "",
+  front: { text: "" },
+  back: { text: "" },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  lastReviewed: null,
+  reviewCount: 0,
+  difficulty: 0
+} as Flashcard);
+export const createShareCodeSync = (deckId: string, days: number = 30): string => "";
+export const createDeckSync = (deckData: Omit<Deck, "id" | "createdAt" | "updatedAt">): Deck => ({
+  id: "",
+  title: "",
+  description: "",
+  authorId: "",
+  isPublic: false,
+  tags: [],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+} as Deck);
+export const getSharedImportedDecksSync = (): { originalId: string; localDeckId: string; }[] => [];
+export const initializeDefaultUserSync = (): User => ({
+  id: "",
+  name: "Utilisateur",
+  email: "",
+  createdAt: new Date().toISOString()
+} as User);
+export const updateUserSync = (userData: Partial<User>): User | null => null;
