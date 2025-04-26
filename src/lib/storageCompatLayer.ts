@@ -68,8 +68,8 @@ export const exportDeckToJson = (deckId: string): SharedDeckExport => {
 };
 export const importDeckFromJson = (sharedDeckData: SharedDeckExport, authorId: string): string => "";
 export const updateDeckFromJson = (sharedDeckData: SharedDeckExport): boolean => false;
-export const publishDeck = (deckId: string): boolean => false;
-export const unpublishDeck = (deckId: string): boolean => false;
-export const updatePublishedDeck = (deckId: string, deckData: Partial<Deck>): Deck | null => null;
+export const publishDeck = async (deck: Deck): Promise<boolean> => false;
+export const unpublishDeck = async (deckId: string): Promise<boolean> => false;
+export const updatePublishedDeck = async (deck: Deck): Promise<Deck | null> => null;
 export const getBase64 = (file: File): string => "";
 export const generateSampleData = (): void => {};

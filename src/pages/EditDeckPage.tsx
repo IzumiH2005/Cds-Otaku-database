@@ -31,11 +31,11 @@ import {
   updateDeck, 
   deleteDeck, 
   getBase64, 
-  getUser, 
-  Deck
-} from "@/lib/localStorage";
+  getUser
+} from "@/lib/storageCompatLayer";
 
-import { publishDeck, unpublishDeck, updatePublishedDeck } from "@/lib/localStorage";
+import type { Deck } from "@/lib/localStorage";
+import { publishDeck, unpublishDeck, updatePublishedDeck } from "@/lib/storageCompatLayer";
 
 const EditDeckPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -343,7 +343,7 @@ const EditDeckPage = () => {
           Modifier le deck
         </h1>
         <div className="flex gap-2">
-          {!deck?.isPublished ? (
+          {!deck?.isPublic ? (
             <Button 
               onClick={handlePublishDeck} 
               disabled={isPublishing}
