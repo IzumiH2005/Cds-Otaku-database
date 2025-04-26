@@ -28,9 +28,12 @@ import {
   getFlashcardsByTheme, 
   getUser, 
   createFlashcard, 
-  getBase64,
   updateFlashcard,
-  deleteFlashcard,
+  deleteFlashcard
+} from "@/lib/storageAdapter";
+
+import {
+  getBase64,
   Flashcard,
   Theme,
   Deck
@@ -43,7 +46,7 @@ const ThemePage = () => {
   const [deck, setDeck] = useState<Deck | null>(null);
   const [theme, setTheme] = useState<Theme | null>(null);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [user, setUser] = useState(getUser());
+  const [user, setUser] = useState<any>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showCardDialog, setShowCardDialog] = useState(false);
@@ -66,41 +69,70 @@ const ThemePage = () => {
     },
   });
 
+  // Charge l'utilisateur
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const userData = await getUser();
+        setUser(userData);
+      } catch (error) {
+        console.error("Erreur lors du chargement de l'utilisateur:", error);
+      }
+    }
+    
+    loadUser();
+  }, []);
+  
   useEffect(() => {
     if (!deckId || !themeId) return;
     
-    const deckData = getDeck(deckId);
-    if (!deckData) {
-      toast({
-        title: "Deck introuvable",
-        description: "Le deck que vous recherchez n'existe pas",
-        variant: "destructive",
-      });
-      navigate("/");
-      return;
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        
+        const deckData = await getDeck(deckId);
+        if (!deckData) {
+          toast({
+            title: "Deck introuvable",
+            description: "Le deck que vous recherchez n'existe pas",
+            variant: "destructive",
+          });
+          navigate("/");
+          return;
+        }
+        
+        const themeData = await getTheme(themeId);
+        if (!themeData) {
+          toast({
+            title: "Thème introuvable",
+            description: "Le thème que vous recherchez n'existe pas",
+            variant: "destructive",
+          });
+          navigate(`/deck/${deckId}`);
+          return;
+        }
+        
+        setDeck(deckData);
+        setTheme(themeData);
+        setIsOwner(user && deckData.authorId === user.id);
+        
+        // Load flashcards
+        const themeCards = await getFlashcardsByTheme(themeId);
+        setFlashcards(themeCards);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données du thème",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
     
-    const themeData = getTheme(themeId);
-    if (!themeData) {
-      toast({
-        title: "Thème introuvable",
-        description: "Le thème que vous recherchez n'existe pas",
-        variant: "destructive",
-      });
-      navigate(`/deck/${deckId}`);
-      return;
-    }
-    
-    setDeck(deckData);
-    setTheme(themeData);
-    setIsOwner(deckData.authorId === user?.id);
-    
-    // Load flashcards
-    const themeCards = getFlashcardsByTheme(themeId);
-    setFlashcards(themeCards);
-    
-    setIsLoading(false);
-  }, [deckId, themeId, navigate, toast, user?.id]);
+    loadData();
+  }, [deckId, themeId, navigate, toast, user]);
   
   // Effet pour contrôler la classe dialog-open sur le body
   useEffect(() => {
@@ -198,19 +230,43 @@ const ThemePage = () => {
     }
   };
 
-  const handleDeleteCard = (cardId: string) => {
-    const updatedCards = flashcards.filter(card => card.id !== cardId);
-    setFlashcards(updatedCards);
+  const handleDeleteCard = async (cardId: string) => {
+    try {
+      const success = await deleteFlashcard(cardId);
+      if (success) {
+        const updatedCards = flashcards.filter(card => card.id !== cardId);
+        setFlashcards(updatedCards);
+      }
+    } catch (error) {
+      console.error("Error deleting flashcard:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la flashcard",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleUpdateCard = (updatedCard: Flashcard) => {
-    const updatedCards = flashcards.map(card => 
-      card.id === updatedCard.id ? updatedCard : card
-    );
-    setFlashcards(updatedCards);
+  const handleUpdateCard = async (updatedCard: Flashcard) => {
+    try {
+      const updatedCardFromDB = await updateFlashcard(updatedCard.id, updatedCard);
+      if (updatedCardFromDB) {
+        const updatedCards = flashcards.map(card => 
+          card.id === updatedCard.id ? updatedCard : card
+        );
+        setFlashcards(updatedCards);
+      }
+    } catch (error) {
+      console.error("Error updating flashcard:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour la flashcard",
+        variant: "destructive",
+      });
+    }
   };
 
-  const createNewCard = () => {
+  const createNewCard = async () => {
     if (!deckId || !themeId) return;
     
     if (!newCard.front.text.trim() && !newCard.front.image) {
@@ -246,14 +302,14 @@ const ThemePage = () => {
         additionalInfo: showBackAdditionalInfo ? newCard.back.additionalInfo.trim() : undefined
       };
       
-      const card = createFlashcard({
+      const card = await createFlashcard({
         deckId,
         themeId,
         front: frontData,
         back: backData,
       });
       
-      setFlashcards([...flashcards, card]);
+      setFlashcards(prevCards => [...prevCards, card as Flashcard]);
       setShowCardDialog(false);
       
       // Reset form
