@@ -3,7 +3,7 @@ import App from './App.tsx'
 import './index.css'
 
 // Marquer l'application comme chargée dès que React commence à rendre
-if (window.markAppAsLoaded) {
+if (typeof window !== 'undefined' && window.markAppAsLoaded) {
   window.markAppAsLoaded();
 }
 
