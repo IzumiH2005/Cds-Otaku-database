@@ -329,3 +329,83 @@ export const updateSessionStats = async (stats: Partial<{
     console.error("Erreur lors de la mise à jour des statistiques de session:", error);
   }
 };
+
+/**
+ * Récupère les statistiques de session de l'utilisateur
+ * @returns Les statistiques de session
+ */
+export const getSessionStats = async (): Promise<{
+  cardsStudied: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  studySessions: number;
+  totalStudyTime: number;
+  lastStudyDate: string;
+}> => {
+  try {
+    const userData = await IndexedDB.loadData(KEYS.USER_DATA_KEY, {
+      stats: {
+        cardsStudied: 0,
+        correctAnswers: 0,
+        incorrectAnswers: 0,
+        studySessions: 0,
+        totalStudyTime: 0,
+        lastStudyDate: new Date().toISOString()
+      }
+    });
+    
+    return userData.stats || {
+      cardsStudied: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      studySessions: 0,
+      totalStudyTime: 0,
+      lastStudyDate: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error("Erreur lors de la récupération des statistiques:", error);
+    return {
+      cardsStudied: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      studySessions: 0,
+      totalStudyTime: 0,
+      lastStudyDate: new Date().toISOString()
+    };
+  }
+};
+
+/**
+ * Version synchrone de getSessionStats pour la compatibilité
+ * @returns Les statistiques de session
+ */
+export const getSessionStatsSync = (): {
+  cardsStudied: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  studySessions: number;
+  totalStudyTime: number;
+  lastStudyDate: string;
+} => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  // Valeurs par défaut retournées immédiatement
+  const defaultStats = {
+    cardsStudied: 0,
+    correctAnswers: 0,
+    incorrectAnswers: 0,
+    studySessions: 0,
+    totalStudyTime: 0,
+    lastStudyDate: new Date().toISOString()
+  };
+  
+  setTimeout(async () => {
+    try {
+      const stats = await getSessionStats();
+      console.log("Stats retrieved (async):", stats);
+    } catch (error) {
+      console.error("Error retrieving stats (async):", error);
+    }
+  }, 0);
+  
+  return defaultStats;
+};

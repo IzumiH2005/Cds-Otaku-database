@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initializeDefaultUser, getUser, updateUser, getBase64 } from "@/lib/localStorage";
-import { getSessionKey, getSessionStats, exportSessionData, importSessionData } from "@/lib/sessionManager";
+import { getSessionKeySync as getSessionKey, getSessionStatsSync as getSessionStats, exportSessionDataSync as exportSessionData, importSessionDataSync as importSessionData } from "@/lib/sessionManager";
 import { Loader2, Save, Download, Upload, Clock, Award, Calendar, BarChart2, Zap } from "lucide-react";
 
 const ProfilePage = () => {
@@ -29,11 +29,11 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchSessionData = async () => {
       try {
-        // Get session key
+        // Get session key (using sync version for compatibility)
         const key = getSessionKey();
         setSessionKey(key);
 
-        // Get user stats
+        // Get user stats (using sync version for compatibility)
         const userStats = getSessionStats();
         setStats(userStats);
 

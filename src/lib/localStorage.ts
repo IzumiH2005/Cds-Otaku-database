@@ -17,6 +17,8 @@ export interface User {
   id: string;
   name: string;
   email?: string;
+  bio?: string;
+  avatar?: string;
   createdAt: string;
   updatedAt: string;
   settings?: any;
@@ -74,11 +76,28 @@ export const getUser = async (): Promise<User | null> => {
   return await IndexedDB.loadData("user", null);
 };
 
+export const initializeDefaultUser = async (): Promise<User> => {
+  const defaultUser: User = {
+    id: uuidv4(),
+    name: "Utilisateur",
+    bio: "",
+    avatar: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    preferredLanguage: "fr"
+  };
+  
+  await IndexedDB.saveData("user", defaultUser);
+  return defaultUser;
+};
+
 export const createUser = async (userData: Partial<User>): Promise<User> => {
   const user: User = {
     id: uuidv4(),
     name: userData.name || "Utilisateur",
     email: userData.email,
+    bio: userData.bio || "",
+    avatar: userData.avatar || "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     preferredLanguage: userData.preferredLanguage || "fr",
