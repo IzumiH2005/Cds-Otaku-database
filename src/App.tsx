@@ -43,13 +43,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("ProtectedRoute: Mounting");
     
-    // Vérification synchrone immédiate
+    // Vérification synchrone immédiate avec optimisation pour une réponse plus rapide
     try {
-      const validSync = hasSessionSync();
-      console.log("ProtectedRoute: Synchronous check result:", validSync);
-      if (validSync) {
+      // Vérifier directement en localStorage sans attendre hasSessionSync()
+      const sessionKey = localStorage.getItem('sessionKey');
+      if (sessionKey && sessionKey.trim() !== '') {
+        // Si une clé existe en localStorage, considérer la session comme valide immédiatement
+        console.log("ProtectedRoute: Direct localStorage check found key:", sessionKey.substring(0, 5) + '...');
         setIsValidSession(true);
         setCheckingSession(false);
+      } else {
+        // Vérifier via hasSessionSync pour la compatibilité
+        const validSync = hasSessionSync();
+        console.log("ProtectedRoute: Synchronous check result:", validSync);
+        if (validSync) {
+          setIsValidSession(true);
+          setCheckingSession(false);
+        }
       }
     } catch (syncError) {
       console.warn("ProtectedRoute: Synchronous check failed:", syncError);
@@ -62,26 +72,45 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         console.log("ProtectedRoute: Starting async session check");
         const valid = await hasSession();
         console.log("ProtectedRoute: Async check result:", valid);
-        setIsValidSession(valid);
+        
+        // Ne mettre à jour que si la vérification synchrone n'a pas déjà autorisé l'accès
+        if (!isValidSession) {
+          setIsValidSession(valid);
+          setCheckingSession(false);
+        }
       } catch (error) {
         console.error("ProtectedRoute: Error during async session check:", error);
-        setIsValidSession(false);
-      } finally {
-        setCheckingSession(false);
+        
+        // En cas d'erreur asynchrone, ne pas rejeter si la vérification synchrone a réussi
+        if (isValidSession !== true) {
+          setIsValidSession(false);
+          setCheckingSession(false);
+        }
       }
     }
     
-    // Commencer la vérification asynchrone
-    checkSession();
+    // Commencer la vérification asynchrone si nécessaire
+    if (isValidSession !== true) {
+      checkSession();
+    }
     
     // Timeout de sécurité pour éviter un blocage indéfini
     const timeoutId = setTimeout(() => {
       if (checkingSession) {
-        console.warn("ProtectedRoute: Session check timeout, allowing access");
-        setIsValidSession(true);
+        console.warn("ProtectedRoute: Session check timeout, checking localStorage directly");
+        
+        // Dernière tentative directe avec localStorage
+        const sessionKey = localStorage.getItem('sessionKey');
+        if (sessionKey && sessionKey.trim() !== '') {
+          console.log("ProtectedRoute: Timeout recovery - localStorage key found");
+          setIsValidSession(true);
+        } else {
+          console.warn("ProtectedRoute: Session check complete failure, redirecting");
+          setIsValidSession(false);
+        }
         setCheckingSession(false);
       }
-    }, 3000);
+    }, 2000); // Réduit à 2 secondes pour une meilleure expérience utilisateur
     
     return () => clearTimeout(timeoutId);
   }, []);

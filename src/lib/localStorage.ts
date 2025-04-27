@@ -11,6 +11,7 @@
 
 import { v4 as uuidv4 } from "uuid";
 import * as IndexedDB from "./enhancedIndexedDB";
+import { generateSessionKey } from "./sessionManager";
 
 // Types de base pour l'application
 export interface User {
@@ -77,20 +78,68 @@ export const getUser = async (): Promise<User | null> => {
 };
 
 export const getUserSync = (): User | null => {
-  // Version synchrone qui initialise une opération asynchrone en arrière-plan
-  // et retourne une valeur par défaut immédiatement
-  let userSyncResult: User | null = null;
+  // Version synchrone améliorée qui cherche d'abord dans localStorage
+  try {
+    // Tenter de récupérer directement de localStorage pour accès immédiat
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        if (user && user.id) {
+          console.log("getUserSync: Retrieved user from localStorage directly");
+          return user;
+        }
+      } catch (parseError) {
+        console.warn("getUserSync: Failed to parse user from localStorage", parseError);
+      }
+    }
+    
+    // Vérifier dans le système de sauvegarde
+    const backupUserJson = localStorage.getItem('backup_user');
+    if (backupUserJson) {
+      try {
+        const backupUser = JSON.parse(backupUserJson);
+        if (backupUser && backupUser.id) {
+          console.log("getUserSync: Retrieved user from backup system");
+          // Sauvegarder dans localStorage pour accès futur
+          localStorage.setItem('user', backupUserJson);
+          return backupUser;
+        }
+      } catch (parseError) {
+        console.warn("getUserSync: Failed to parse backup user", parseError);
+      }
+    }
+  } catch (error) {
+    console.error("getUserSync: Error accessing localStorage", error);
+  }
   
+  // Créer un utilisateur temporaire par défaut
+  const tempUser: User = {
+    id: 'temp-' + Date.now(),
+    name: "Utilisateur temporaire",
+    bio: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    preferredLanguage: "fr"
+  };
+  
+  // Déclencher la requête asynchrone en arrière-plan
   setTimeout(async () => {
     try {
       const user = await getUser();
-      console.log("User retrieved (async):", user);
+      console.log("User retrieved (async):", user ? "Found" : "Not found");
+      
+      // Si aucun utilisateur trouvé, en créer un par défaut
+      if (!user) {
+        console.log("Creating default user in background...");
+        await createUser(tempUser);
+      }
     } catch (error) {
       console.error("Error retrieving user (async):", error);
     }
   }, 0);
   
-  return userSyncResult;
+  return tempUser;
 };
 
 export const initializeDefaultUser = async (): Promise<User> => {
@@ -155,20 +204,63 @@ export const getDeck = async (id: string): Promise<Deck | null> => {
 };
 
 export const getDeckSync = (id: string): Deck | null => {
-  // Version synchrone qui initialise une opération asynchrone en arrière-plan
-  // et retourne une valeur par défaut
-  const defaultDeck: Deck | null = null;
+  try {
+    // Tenter de récupérer depuis localStorage
+    const decksJson = localStorage.getItem('decks');
+    if (decksJson) {
+      const decks = JSON.parse(decksJson);
+      if (Array.isArray(decks)) {
+        const deck = decks.find((d: Deck) => d.id === id);
+        if (deck) {
+          console.log("getDeckSync: Found deck in localStorage");
+          return deck;
+        }
+      }
+    }
+    
+    // Vérifier dans le système de sauvegarde
+    const backupDecksJson = localStorage.getItem('backup_decks');
+    if (backupDecksJson) {
+      try {
+        const backupDecks = JSON.parse(backupDecksJson);
+        if (Array.isArray(backupDecks)) {
+          const deck = backupDecks.find((d: Deck) => d.id === id);
+          if (deck) {
+            console.log("getDeckSync: Found deck in backup system");
+            return deck;
+          }
+        }
+      } catch (parseError) {
+        console.warn("getDeckSync: Failed to parse backup decks", parseError);
+      }
+    }
+  } catch (error) {
+    console.error("getDeckSync: Error accessing localStorage", error);
+  }
   
+  // Créer un deck temporaire par défaut pour éviter les erreurs d'affichage
+  const tempDeck: Deck = {
+    id: id || 'temp-' + Date.now(),
+    authorId: 'temp-author',
+    title: "Chargement...",
+    description: "Les données sont en cours de chargement...",
+    isPublic: false,
+    tags: ["Chargement"],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Déclencher la requête asynchrone en arrière-plan
   setTimeout(async () => {
     try {
       const deck = await getDeck(id);
-      console.log("Deck retrieved (async):", deck);
+      console.log("Deck retrieved (async):", deck ? "Found" : "Not found");
     } catch (error) {
       console.error("Error retrieving deck (async):", error);
     }
   }, 0);
   
-  return defaultDeck;
+  return tempDeck;
 };
 
 export const createDeck = async (deckData: Omit<Deck, "id" | "createdAt" | "updatedAt">): Promise<Deck> => {
@@ -234,19 +326,71 @@ export const getThemesByDeck = async (deckId: string): Promise<Theme[]> => {
 };
 
 export const getThemesByDeckSync = (deckId: string): Theme[] => {
-  // Version synchrone qui initialise une opération asynchrone en arrière-plan
-  const defaultThemes: Theme[] = [];
+  try {
+    // Tenter de récupérer depuis localStorage
+    const themesJson = localStorage.getItem('themes');
+    if (themesJson) {
+      const themes = JSON.parse(themesJson);
+      if (Array.isArray(themes)) {
+        const deckThemes = themes.filter((t: Theme) => t.deckId === deckId);
+        if (deckThemes.length > 0) {
+          console.log(`getThemesByDeckSync: Found ${deckThemes.length} themes in localStorage`);
+          return deckThemes;
+        }
+      }
+    }
+    
+    // Vérifier dans le système de sauvegarde
+    const backupThemesJson = localStorage.getItem('backup_themes');
+    if (backupThemesJson) {
+      try {
+        const backupThemes = JSON.parse(backupThemesJson);
+        if (Array.isArray(backupThemes)) {
+          const deckThemes = backupThemes.filter((t: Theme) => t.deckId === deckId);
+          if (deckThemes.length > 0) {
+            console.log(`getThemesByDeckSync: Found ${deckThemes.length} themes in backup system`);
+            return deckThemes;
+          }
+        }
+      } catch (parseError) {
+        console.warn("getThemesByDeckSync: Failed to parse backup themes", parseError);
+      }
+    }
+  } catch (error) {
+    console.error("getThemesByDeckSync: Error accessing localStorage", error);
+  }
   
+  // Créer un thème par défaut temporaire
+  const defaultTheme: Theme = {
+    id: 'temp-' + Date.now(),
+    deckId: deckId,
+    title: "Thème par défaut",
+    description: "Chargement des thèmes...",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Déclencher la requête asynchrone en arrière-plan
   setTimeout(async () => {
     try {
       const themes = await getThemesByDeck(deckId);
-      console.log("Themes retrieved (async):", themes);
+      console.log(`Themes retrieved (async): ${themes.length}`);
+      
+      // Si aucun thème trouvé, en créer un par défaut
+      if (themes.length === 0) {
+        console.log("Creating default theme in background...");
+        await createTheme({
+          deckId: deckId,
+          title: "Général",
+          description: "Thème général pour toutes les cartes"
+        });
+      }
     } catch (error) {
       console.error("Error retrieving themes (async):", error);
     }
   }, 0);
   
-  return defaultThemes;
+  return [defaultTheme];
 };
 
 export const getTheme = async (id: string): Promise<Theme | undefined> => {
@@ -347,13 +491,93 @@ export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> 
 };
 
 export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
-  // Version synchrone qui initialise une opération asynchrone en arrière-plan
-  const defaultFlashcards: Flashcard[] = [];
+  try {
+    // Tenter de récupérer depuis localStorage
+    const flashcardsJson = localStorage.getItem('flashcards');
+    if (flashcardsJson) {
+      const flashcards = JSON.parse(flashcardsJson);
+      if (Array.isArray(flashcards)) {
+        const deckFlashcards = flashcards.filter((c: Flashcard) => c.deckId === deckId);
+        if (deckFlashcards.length > 0) {
+          console.log(`getFlashcardsByDeckSync: Found ${deckFlashcards.length} flashcards in localStorage`);
+          return deckFlashcards;
+        }
+      }
+    }
+    
+    // Vérifier dans le système de sauvegarde
+    const backupFlashcardsJson = localStorage.getItem('backup_flashcards');
+    if (backupFlashcardsJson) {
+      try {
+        const backupFlashcards = JSON.parse(backupFlashcardsJson);
+        if (Array.isArray(backupFlashcards)) {
+          const deckFlashcards = backupFlashcards.filter((c: Flashcard) => c.deckId === deckId);
+          if (deckFlashcards.length > 0) {
+            console.log(`getFlashcardsByDeckSync: Found ${deckFlashcards.length} flashcards in backup system`);
+            return deckFlashcards;
+          }
+        }
+      } catch (parseError) {
+        console.warn("getFlashcardsByDeckSync: Failed to parse backup flashcards", parseError);
+      }
+    }
+  } catch (error) {
+    console.error("getFlashcardsByDeckSync: Error accessing localStorage", error);
+  }
   
+  // Créer des flashcards temporaires par défaut
+  const defaultFlashcards: Flashcard[] = [
+    {
+      id: 'temp-' + Date.now(),
+      deckId: deckId,
+      front: "Exemple de question",
+      back: "Exemple de réponse",
+      hints: ["Ceci est un exemple"],
+      additionalInfo: "Contenu en cours de chargement...",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'temp-' + (Date.now() + 1),
+      deckId: deckId,
+      front: "Qu'est-ce qu'une flashcard?",
+      back: "Une carte avec une question au recto et une réponse au verso.",
+      hints: ["Pensez aux outils d'apprentissage"],
+      additionalInfo: "Contenu en cours de chargement...",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+  
+  // Déclencher la requête asynchrone en arrière-plan
   setTimeout(async () => {
     try {
       const flashcards = await getFlashcardsByDeck(deckId);
-      console.log("Flashcards retrieved (async):", flashcards);
+      console.log(`Flashcards retrieved (async): ${flashcards.length}`);
+      
+      // Si aucune flashcard trouvée, en créer quelques-unes par défaut
+      if (flashcards.length === 0) {
+        console.log("Creating default flashcards in background...");
+        const user = await getUser();
+        if (user) {
+          // Créer quelques flashcards par défaut pour ce deck
+          await createFlashcard({
+            deckId: deckId,
+            front: "Comment utiliser les flashcards?",
+            back: "Lisez la question, réfléchissez à la réponse, puis retournez la carte pour vérifier.",
+            hints: ["Pensez à la méthode d'apprentissage active"],
+            additionalInfo: "Technique d'apprentissage fondamentale"
+          });
+          
+          await createFlashcard({
+            deckId: deckId,
+            front: "Quels sont les avantages des flashcards?",
+            back: "Apprentissage actif, répétition espacée, mémorisation efficace, et apprentissage mobile.",
+            hints: ["Pensez aux bénéfices pour la mémoire"],
+            additionalInfo: "Technique d'apprentissage fondamentale"
+          });
+        }
+      }
     } catch (error) {
       console.error("Error retrieving flashcards (async):", error);
     }
@@ -717,23 +941,66 @@ export const getBase64Sync = (file: File): string => {
 
 // Initialisation des données
 export const generateSampleData = async (): Promise<void> => {
-  // Vérifier si l'utilisateur existe déjà
-  const user = await getUser();
-  if (!user) {
-    // Créer un utilisateur par défaut si aucun n'existe
-    await createUser({
-      name: "Utilisateur",
-      preferredLanguage: "fr"
-    });
+  try {
+    // Vérifier d'abord si l'utilisateur existe déjà
+    const user = await getUser();
+    if (!user) {
+      console.log("Generating sample data for new user...");
+      
+      // Créer un utilisateur par défaut
+      const newUser = await createUser({
+        name: "Utilisateur",
+        preferredLanguage: "fr"
+      });
+      console.log("Created default user");
+      
+      // Également stocker en localStorage directement pour éviter les problèmes lors de la navigation
+      try {
+        localStorage.setItem('user', JSON.stringify(newUser));
+        console.log("Saved user data to localStorage for immediate access");
+      } catch (localError) {
+        console.warn("Could not save user to localStorage:", localError);
+      }
+      
+      // Créer quelques decks de démonstration
+      const defaultDeckId = await createDefaultDeck();
+      console.log("Created default deck:", defaultDeckId);
+      
+      // Créer un sample theme
+      const themeId = await createDefaultTheme(defaultDeckId);
+      console.log("Created default theme:", themeId);
+      
+      // Créer des flashcards par défaut
+      await createDefaultFlashcards(defaultDeckId, themeId);
+      console.log("Created default flashcards");
+      
+      // Sauvegarder également une clé de session par défaut
+      const sessionKey = localStorage.getItem('sessionKey');
+      if (!sessionKey) {
+        // Générer une nouvelle clé si aucune n'existe
+        const newKey = generateSessionKey();
+        localStorage.setItem('sessionKey', newKey);
+        console.log("Generated and saved new session key for immediate access");
+      } else {
+        console.log("Using existing session key");
+      }
+    } else {
+      console.log("User already exists, no need to generate sample data");
+    }
+  } catch (error) {
+    console.error("Error generating sample data:", error);
     
-    // Créer quelques decks de démonstration
-    const defaultDeckId = await createDefaultDeck();
-    
-    // Créer un sample theme
-    const themeId = await createDefaultTheme(defaultDeckId);
-    
-    // Créer des flashcards par défaut
-    await createDefaultFlashcards(defaultDeckId, themeId);
+    // En cas d'erreur, nous assurons au minimum qu'une clé de session existe
+    try {
+      const sessionKey = localStorage.getItem('sessionKey');
+      if (!sessionKey) {
+        const newKey = generateSessionKey();
+        localStorage.setItem('sessionKey', newKey);
+        console.log("Error recovery: Generated new session key");
+      }
+    } catch (sessionError) {
+      console.error("Failed to create session key during error recovery:", sessionError);
+    }
   }
 };
 

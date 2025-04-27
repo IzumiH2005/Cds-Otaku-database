@@ -197,6 +197,25 @@ export const getSessionKeySync = (): string => {
       console.log("getSessionKeySync: No key found in localStorage");
     }
     
+    // Si aucune clé en localStorage, vérifier au moins une fois directement 
+    // les données de sauvegarde (sans attendre IndexedDB)
+    if (!sessionKey) {
+      try {
+        const backupKey = localStorage.getItem('backup_' + KEYS.SESSION_KEY);
+        if (backupKey) {
+          const parsedKey = JSON.parse(backupKey);
+          if (typeof parsedKey === 'string') {
+            console.log("getSessionKeySync: Retrieved key from backup system");
+            // Stocker directement dans localStorage pour les prochains appels
+            localStorage.setItem(KEYS.SESSION_KEY, parsedKey);
+            return parsedKey;
+          }
+        }
+      } catch (e) {
+        console.warn("Error reading from backup:", e);
+      }
+    }
+    
     // Déclenche l'opération réelle en arrière-plan sans bloquer
     setTimeout(async () => {
       try {
