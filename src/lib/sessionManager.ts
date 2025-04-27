@@ -135,69 +135,43 @@ export const importSessionData = async (data: string): Promise<boolean> => {
 // Ces fonctions lancent des opérations asynchrones en arrière-plan
 
 export const hasSessionSync = (): boolean => {
-  // Version synchrone qui retourne toujours true pour éviter les erreurs
-  // L'opération asynchrone réelle sera gérée séparément
+  // Retourne toujours true pour compatibilité, mais déclenche l'opération async en background
   setTimeout(async () => {
-    const result = await hasSession();
-    console.log("Session check (async):", result);
+    try {
+      const result = await hasSession();
+      console.log("Session check (async):", result);
+    } catch (error) {
+      console.error("Error checking session (async):", error);
+    }
   }, 0);
   
+  // Pour la compatibilité, supposons qu'une session existe
   return true;
 };
 
 export const getSessionKeySync = (): string => {
-  // Version synchrone qui retourne une valeur par défaut
-  // L'opération asynchrone réelle sera gérée séparément
-  let fallbackKey = "session-key-placeholder";
+  // Génère une clé temporaire pour compatibilité
+  const tempKey = localStorage.getItem(KEYS.SESSION_KEY) || "temp-session-key";
   
-  try {
-    // Essayer de lire depuis IndexedDB de façon synchrone (non recommandé)
-    const dbPromise = window.indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
-    const fallbackData = { key: fallbackKey };
-    
-    dbPromise.onsuccess = (event) => {
-      const db = dbPromise.result;
-      const transaction = db.transaction(DB_CONFIG.STORE_NAME, 'readonly');
-      const store = transaction.objectStore(DB_CONFIG.STORE_NAME);
-      const request = store.get(KEYS.SESSION_KEY);
-      
-      request.onsuccess = () => {
-        if (request.result && request.result.value) {
-          fallbackKey = request.result.value;
-        }
-      };
-    };
-  } catch (error) {
-    console.error("Erreur lors de la tentative de lecture synchrone:", error);
-  }
-  
+  // Déclenche l'opération réelle en arrière-plan
   setTimeout(async () => {
-    const key = await getSessionKey();
-    console.log("Session key retrieved (async):", key);
+    try {
+      const key = await getSessionKey();
+      console.log("Session key retrieved (async):", key);
+    } catch (error) {
+      console.error("Error retrieving session key (async):", error);
+    }
   }, 0);
   
-  return fallbackKey;
+  return tempKey;
 };
 
 export const saveSessionKeySync = (key: string): void => {
-  // Version synchrone, uniquement IndexedDB sans localStorage
+  // Pour la compatibilité, sauvegarde également dans localStorage
   try {
-    // Tentative de sauvegarde synchrone
-    const dbPromise = window.indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
-    
-    dbPromise.onsuccess = (event) => {
-      const db = dbPromise.result;
-      const transaction = db.transaction(DB_CONFIG.STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(DB_CONFIG.STORE_NAME);
-      
-      store.put({
-        key: KEYS.SESSION_KEY,
-        value: key,
-        lastUpdated: new Date().toISOString()
-      });
-    };
+    localStorage.setItem(KEYS.SESSION_KEY, key);
   } catch (error) {
-    console.error("Erreur lors de la tentative d'écriture synchrone:", error);
+    console.error("Error in saveSessionKeySync:", error);
   }
   
   // Lancer l'opération asynchrone en arrière-plan

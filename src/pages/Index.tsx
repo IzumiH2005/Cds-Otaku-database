@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, Key, Copy, Plus, BookOpen, Check, Download, Upload, Info, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSessionKey, saveSessionKey, generateSessionKey, exportSessionData, importSessionData, verifySession } from '@/lib/sessionManager';
+import { 
+  getSessionKey, saveSessionKey, generateSessionKey, exportSessionData, importSessionData, verifySession,
+  // Versions synchrones pour compatibilité
+  getSessionKeySync, saveSessionKeySync, generateSessionKeySync, exportSessionDataSync, importSessionDataSync, verifySessionSync
+} from '@/lib/sessionManager';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [sessionKey, setSessionKey] = useState(getSessionKey() || '');
+  const [sessionKey, setSessionKey] = useState(''); // Initialisé vide, sera mis à jour dans useEffect
   const [isCopied, setIsCopied] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -20,15 +24,25 @@ const Index = () => {
   const [importData, setImportData] = useState('');
   
   useEffect(() => {
-    // Check if user has a valid session key
-    const hasValidSession = verifySession();
+    // Vérifie si l'utilisateur a une clé de session valide
+    // Utilise la version synchrone pour la compatibilité
+    const hasValidSession = verifySessionSync(getSessionKeySync() || '');
     
-    // Update the session key state
-    setSessionKey(getSessionKey() || '');
+    // Mettre à jour l'état de la clé de session
+    setSessionKey(getSessionKeySync() || '');
+
+    // Également déclencher la vérification asynchrone pour background update
+    setTimeout(async () => {
+      const sessionKey = await getSessionKey();
+      if (sessionKey) {
+        const valid = await verifySession(sessionKey);
+        console.log("Vérification asynchrone de la session:", valid);
+      }
+    }, 0);
   }, []);
 
   const handleCopyKey = () => {
-    const currentSessionKey = getSessionKey();
+    const currentSessionKey = getSessionKeySync();
     if (currentSessionKey) {
       navigator.clipboard.writeText(currentSessionKey);
       setIsCopied(true);
@@ -42,8 +56,8 @@ const Index = () => {
   };
   
   const handleGenerateKey = () => {
-    const newKey = generateSessionKey();
-    saveSessionKey(newKey);
+    const newKey = generateSessionKeySync();
+    saveSessionKeySync(newKey);
     setSessionKey(newKey);
     
     toast({
@@ -53,9 +67,19 @@ const Index = () => {
   };
   
   const handleExportData = () => {
-    const data = exportSessionData();
+    const data = exportSessionDataSync();
     setExportData(data);
     setShowExportDialog(true);
+    
+    // Déclencher l'exportation asynchrone réelle en arrière-plan
+    setTimeout(async () => {
+      try {
+        const asyncData = await exportSessionData();
+        setExportData(asyncData);
+      } catch (error) {
+        console.error("Erreur lors de l'exportation asynchrone:", error);
+      }
+    }, 100);
   };
   
   const handleImportData = () => {
@@ -68,16 +92,31 @@ const Index = () => {
       return;
     }
     
-    const success = importSessionData(importData);
+    // Version synchrone pour compatibilité immédiate
+    const success = importSessionDataSync(importData);
     
     if (success) {
       toast({
         title: "Données importées",
         description: "Vos données ont été importées avec succès.",
       });
-      setSessionKey(getSessionKey() || '');
+      setSessionKey(getSessionKeySync() || '');
       setShowImportDialog(false);
       setImportData('');
+      
+      // Vérification asynchrone du résultat réel
+      setTimeout(async () => {
+        try {
+          const asyncSuccess = await importSessionData(importData);
+          console.log("Importation asynchrone:", asyncSuccess);
+          if (asyncSuccess) {
+            const sessionKey = await getSessionKey();
+            if (sessionKey) setSessionKey(sessionKey);
+          }
+        } catch (error) {
+          console.error("Erreur lors de l'importation asynchrone:", error);
+        }
+      }, 100);
     } else {
       toast({
         title: "Erreur",
