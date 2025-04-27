@@ -163,13 +163,28 @@ if (typeof indexedDB === 'undefined') {
   logInfo('IndexedDB is not available in this browser!');
   
   // Initialiser uniquement le système de sauvegarde
-  import('./lib/storageBackup').then(({ initBackupSystem }) => {
+  import('./lib/storageBackup').then(({ initBackupSystem, ensureDefaultValues }) => {
     logInfo('Backup system initialized (using localStorage only)');
     initBackupSystem();
+    ensureDefaultValues();
+    logInfo('Created default values for all required data types');
     renderApp();
   }).catch(error => {
     console.error('Error initializing backup system:', error);
     logInfo('Error initializing backup system: ' + String(error));
+    
+    // Même si le système de sauvegarde a échoué, tenter de créer des valeurs par défaut minimales
+    // pour éviter un plantage complet de l'application
+    try {
+      if (!localStorage.getItem('sessionKey')) {
+        const tempSessionKey = Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('sessionKey', tempSessionKey);
+        logInfo('Emergency fallback: Created session key');
+      }
+    } catch (e) {
+      logInfo('Complete failure - cannot write to localStorage');
+    }
+    
     renderApp(); // Rendre l'application malgré l'erreur
   });
 } else {
@@ -180,6 +195,7 @@ if (typeof indexedDB === 'undefined') {
   ]).then(([indexedDBModule, backupModule]) => {
     logInfo('IndexedDB initialized successfully');
     backupModule.initBackupSystem();
+    backupModule.ensureDefaultValues();
     logInfo('Backup system initialized and synchronized with IndexedDB');
     
     // Vérifier s'il y a des données à récupérer depuis localStorage
@@ -194,12 +210,26 @@ if (typeof indexedDB === 'undefined') {
     logInfo('Error initializing storage systems: ' + String(error));
     
     // Tenter d'initialiser uniquement le système de sauvegarde
-    import('./lib/storageBackup').then(({ initBackupSystem }) => {
+    import('./lib/storageBackup').then(({ initBackupSystem, ensureDefaultValues }) => {
       logInfo('Fallback to backup system only');
       initBackupSystem();
+      ensureDefaultValues();
+      logInfo('Created default values for all required data types');
       renderApp();
     }).catch(() => {
       logInfo('Complete storage initialization failure!');
+      
+      // Dernier recours - créer des données minimales directement
+      try {
+        if (!localStorage.getItem('sessionKey')) {
+          const tempSessionKey = Math.random().toString(36).substring(2, 15);
+          localStorage.setItem('sessionKey', tempSessionKey);
+          logInfo('Last resort: Created basic session key');
+        }
+      } catch (e) {
+        logInfo('Complete failure - cannot write to localStorage');
+      }
+      
       renderApp(); // Rendre l'application malgré l'erreur
     });
   });

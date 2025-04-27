@@ -142,10 +142,71 @@ export const initBackupSystem = (): void => {
       }
     });
     
+    // Créer des valeurs par défaut minimales pour les clés critiques si elles n'existent pas
+    ensureDefaultValues();
+    
     // Mise à jour du timestamp global
     localStorage.setItem(BACKUP_TIMESTAMP, Date.now().toString());
     console.log("Backup system successfully initialized");
   } catch (error) {
     console.error("Error during backup system initialization:", error);
+  }
+};
+
+/**
+ * Crée des valeurs par défaut pour les clés critiques
+ * Assure que les composants qui utilisent des fonctions synchrones ont toujours
+ * au moins des données vides mais valides pour éviter des erreurs
+ */
+export const ensureDefaultValues = (): void => {
+  try {
+    // Vérifier et créer une session par défaut si nécessaire
+    if (!localStorage.getItem('sessionKey') && !localStorage.getItem(`${BACKUP_PREFIX}sessionKey`)) {
+      const sessionKey = Math.random().toString(36).substring(2, 10) + 
+                         Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('sessionKey', sessionKey);
+      backupData('sessionKey', sessionKey);
+      console.log("Created default session key");
+    }
+    
+    // Vérifier et créer un utilisateur par défaut si nécessaire
+    if (!localStorage.getItem('user') && !localStorage.getItem(`${BACKUP_PREFIX}user`)) {
+      const defaultUser = {
+        id: 'default-' + Date.now(),
+        name: "Utilisateur",
+        bio: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        preferredLanguage: "fr"
+      };
+      localStorage.setItem('user', JSON.stringify(defaultUser));
+      backupData('user', defaultUser);
+      console.log("Created default user");
+    }
+    
+    // Vérifier et créer une array vide pour les decks si nécessaire
+    if (!localStorage.getItem('decks') && !localStorage.getItem(`${BACKUP_PREFIX}decks`)) {
+      localStorage.setItem('decks', JSON.stringify([]));
+      backupData('decks', []);
+      console.log("Created empty decks array");
+    }
+    
+    // Vérifier et créer une array vide pour les themes si nécessaire
+    if (!localStorage.getItem('themes') && !localStorage.getItem(`${BACKUP_PREFIX}themes`)) {
+      localStorage.setItem('themes', JSON.stringify([]));
+      backupData('themes', []);
+      console.log("Created empty themes array");
+    }
+    
+    // Vérifier et créer une array vide pour les flashcards si nécessaire
+    if (!localStorage.getItem('flashcards') && !localStorage.getItem(`${BACKUP_PREFIX}flashcards`)) {
+      localStorage.setItem('flashcards', JSON.stringify([]));
+      backupData('flashcards', []);
+      console.log("Created empty flashcards array");
+    }
+    
+    console.log("Default values ensured for all critical keys");
+  } catch (error) {
+    console.error("Error ensuring default values:", error);
   }
 };
