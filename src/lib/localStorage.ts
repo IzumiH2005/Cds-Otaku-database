@@ -12,65 +12,11 @@
 import { v4 as uuidv4 } from "uuid";
 import * as IndexedDB from "./enhancedIndexedDB";
 import { generateSessionKey } from "./sessionManager";
+import { User, Deck, Theme, Flashcard, SharedDeckExport } from '../types/localStorage';
 
-// Types de base pour l'application
-export interface User {
-  id: string;
-  name: string;
-  email?: string;
-  bio?: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
-  settings?: any;
-  preferredLanguage?: string;
-}
-
-export interface Deck {
-  id: string;
-  authorId: string;
-  title: string;
-  description: string;
-  coverImage?: string;
-  isPublic: boolean;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Theme {
-  id: string;
-  deckId: string;
-  title: string;
-  description: string;
-  coverImage?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Flashcard {
-  id: string;
-  deckId: string;
-  themeId?: string;
-  front: string;
-  back: string;
-  hints?: string[];
-  additionalInfo?: string;
-  frontImage?: string;
-  backImage?: string;
-  frontAudio?: string;
-  backAudio?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SharedDeckExport {
-  deck: Deck;
-  themes: Theme[];
-  flashcards: Flashcard[];
-  exportDate: string;
-  version: string;
-}
+// Interface pour les autres parties de l'application qui n'utilisent pas 
+// encore les types étendus
+export type { User, Deck, Theme, Flashcard, SharedDeckExport } from '../types/localStorage';
 
 // Fonctions liées aux utilisateurs
 export const getUser = async (): Promise<User | null> => {
@@ -193,6 +139,18 @@ export const getDecks = async (): Promise<Deck[]> => {
   return await IndexedDB.loadData("decks", []);
 };
 
+// Fonction pour récupérer uniquement les decks créés par l'utilisateur (non exemples)
+export const getUserDecks = async (): Promise<Deck[]> => {
+  const decks = await getDecks();
+  return decks.filter(deck => !deck.isExample);
+};
+
+// Fonction pour récupérer uniquement les decks d'exemple
+export const getExampleDecks = async (): Promise<Deck[]> => {
+  const decks = await getDecks();
+  return decks.filter(deck => deck.isExample === true);
+};
+
 export const getDecksByAuthor = async (authorId: string): Promise<Deck[]> => {
   const decks = await getDecks();
   return decks.filter(deck => deck.authorId === authorId);
@@ -283,35 +241,146 @@ export const updateDeck = async (id: string, deckData: Partial<Deck>): Promise<D
   
   if (deckIndex === -1) return null;
   
+  // Conserver le flag isExample s'il existe
+  let isExample = decks[deckIndex].isExample;
+  
   const updatedDeck = {
     ...decks[deckIndex],
     ...deckData,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // S'assurer que la mise à jour ne retire pas la propriété isExample si elle était déjà présente
+    ...(isExample !== undefined && { isExample })
   };
   
   decks[deckIndex] = updatedDeck;
   await IndexedDB.saveData("decks", decks);
   
+  // Mettre à jour également localStorage pour un accès immédiat
+  try {
+    const localDecks = JSON.parse(localStorage.getItem('decks') || '[]');
+    const localDeckIndex = localDecks.findIndex((d: Deck) => d.id === id);
+    
+    if (localDeckIndex !== -1) {
+      localDecks[localDeckIndex] = updatedDeck;
+      localStorage.setItem('decks', JSON.stringify(localDecks));
+    }
+  } catch (error) {
+    console.error("Error updating localStorage during deck update:", error);
+  }
+  
   return updatedDeck;
+};
+
+// Version synchrone pour modifier un deck
+export const updateDeckSync = (id: string, deckData: Partial<Deck>): Deck | null => {
+  try {
+    // Tenter de récupérer les decks depuis localStorage
+    const decksJson = localStorage.getItem('decks');
+    if (decksJson) {
+      const decks = JSON.parse(decksJson);
+      if (Array.isArray(decks)) {
+        const deckIndex = decks.findIndex((d: Deck) => d.id === id);
+        if (deckIndex !== -1) {
+          // Conserver le flag isExample s'il existe
+          let isExample = decks[deckIndex].isExample;
+          
+          const updatedDeck: Deck = {
+            ...decks[deckIndex],
+            ...deckData,
+            updatedAt: new Date().toISOString(),
+            // S'assurer que la mise à jour ne retire pas la propriété isExample
+            ...(isExample !== undefined && { isExample })
+          };
+          
+          decks[deckIndex] = updatedDeck;
+          localStorage.setItem('decks', JSON.stringify(decks));
+          
+          // Lancer l'opération asynchrone en arrière-plan
+          setTimeout(async () => {
+            try {
+              await updateDeck(id, deckData);
+              console.log("Deck updated (async)");
+            } catch (error) {
+              console.error("Error updating deck (async):", error);
+            }
+          }, 0);
+          
+          return updatedDeck;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in updateDeckSync:", error);
+  }
+  
+  // Si nous n'avons pas pu mettre à jour en synchrone, lancer quand même l'update asynchrone
+  setTimeout(async () => {
+    try {
+      await updateDeck(id, deckData);
+    } catch (error) {
+      console.error("Error updating deck after sync failure:", error);
+    }
+  }, 0);
+  
+  return null;
 };
 
 export const deleteDeck = async (id: string): Promise<boolean> => {
   const decks = await getDecks();
+  const deckToDelete = decks.find(deck => deck.id === id);
+  
+  if (!deckToDelete) return false;
+  
+  // Permettre la suppression même si c'est un deck d'exemple
   const newDecks = decks.filter(deck => deck.id !== id);
   
-  if (newDecks.length === decks.length) return false;
-  
+  // Mettre à jour IndexedDB
   await IndexedDB.saveData("decks", newDecks);
   
-  // Supprimer aussi les thèmes et flashcards associés
+  // Mettre à jour également localStorage pour un accès immédiat
+  try {
+    const localDecks = JSON.parse(localStorage.getItem('decks') || '[]');
+    const updatedLocalDecks = localDecks.filter((deck: Deck) => deck.id !== id);
+    localStorage.setItem('decks', JSON.stringify(updatedLocalDecks));
+  } catch (error) {
+    console.error("Error updating localStorage during deck deletion:", error);
+  }
+  
+  // Supprimer aussi les thèmes associés
   const themes = await getThemes();
+  const themesToDelete = themes.filter(theme => theme.deckId === id);
   const newThemes = themes.filter(theme => theme.deckId !== id);
+  
+  // Mettre à jour IndexedDB pour les thèmes
   await IndexedDB.saveData("themes", newThemes);
   
+  // Mettre à jour localStorage pour les thèmes
+  try {
+    const localThemes = JSON.parse(localStorage.getItem('themes') || '[]');
+    const updatedLocalThemes = localThemes.filter((theme: Theme) => theme.deckId !== id);
+    localStorage.setItem('themes', JSON.stringify(updatedLocalThemes));
+  } catch (error) {
+    console.error("Error updating localStorage during theme deletion:", error);
+  }
+  
+  // Supprimer aussi les flashcards associées
   const flashcards = await getFlashcards();
+  const cardsToDelete = flashcards.filter(card => card.deckId === id);
   const newFlashcards = flashcards.filter(card => card.deckId !== id);
+  
+  // Mettre à jour IndexedDB pour les flashcards
   await IndexedDB.saveData("flashcards", newFlashcards);
   
+  // Mettre à jour localStorage pour les flashcards
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    const updatedLocalFlashcards = localFlashcards.filter((card: Flashcard) => card.deckId !== id);
+    localStorage.setItem('flashcards', JSON.stringify(updatedLocalFlashcards));
+  } catch (error) {
+    console.error("Error updating localStorage during flashcard deletion:", error);
+  }
+  
+  console.log(`Suppression complète du deck ${id}: ${themesToDelete.length} thèmes et ${cardsToDelete.length} flashcards supprimés`);
   return true;
 };
 
@@ -320,9 +389,33 @@ export const getThemes = async (): Promise<Theme[]> => {
   return await IndexedDB.loadData("themes", []);
 };
 
+// Fonction pour récupérer uniquement les thèmes créés par l'utilisateur (non exemples)
+export const getUserThemes = async (): Promise<Theme[]> => {
+  const themes = await getThemes();
+  return themes.filter(theme => !theme.isExample);
+};
+
+// Fonction pour récupérer uniquement les thèmes d'exemple
+export const getExampleThemes = async (): Promise<Theme[]> => {
+  const themes = await getThemes();
+  return themes.filter(theme => theme.isExample === true);
+};
+
 export const getThemesByDeck = async (deckId: string): Promise<Theme[]> => {
   const themes = await getThemes();
   return themes.filter(theme => theme.deckId === deckId);
+};
+
+// Fonction pour récupérer uniquement les thèmes non-exemples d'un deck spécifique
+export const getUserThemesByDeck = async (deckId: string): Promise<Theme[]> => {
+  const themes = await getThemesByDeck(deckId);
+  return themes.filter(theme => !theme.isExample);
+};
+
+// Fonction pour récupérer uniquement les thèmes exemples d'un deck spécifique
+export const getExampleThemesByDeck = async (deckId: string): Promise<Theme[]> => {
+  const themes = await getThemesByDeck(deckId);
+  return themes.filter(theme => theme.isExample === true);
 };
 
 export const getThemesByDeckSync = (deckId: string): Theme[] => {
@@ -424,7 +517,9 @@ export const createThemeSync = (themeData: Omit<Theme, "id" | "createdAt" | "upd
     deckId: themeData.deckId,
     title: themeData.title,
     description: themeData.description,
-    coverImage: themeData.coverImage
+    coverImage: themeData.coverImage,
+    // Préserve le flag isExample si présent
+    ...(themeData as any).isExample && { isExample: true }
   };
   
   // Lancer l'opération asynchrone en arrière-plan
@@ -446,27 +541,111 @@ export const updateTheme = async (id: string, themeData: Partial<Theme>): Promis
   
   if (themeIndex === -1) return null;
   
+  // Conserver le flag isExample s'il existe
+  let isExample = themes[themeIndex].isExample;
+  
   const updatedTheme = {
     ...themes[themeIndex],
     ...themeData,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // S'assurer que la mise à jour ne retire pas la propriété isExample si elle était déjà présente
+    ...(isExample !== undefined && { isExample })
   };
   
   themes[themeIndex] = updatedTheme;
   await IndexedDB.saveData("themes", themes);
   
+  // Mettre à jour également localStorage pour un accès immédiat
+  try {
+    const localThemes = JSON.parse(localStorage.getItem('themes') || '[]');
+    const localThemeIndex = localThemes.findIndex((t: Theme) => t.id === id);
+    
+    if (localThemeIndex !== -1) {
+      localThemes[localThemeIndex] = updatedTheme;
+      localStorage.setItem('themes', JSON.stringify(localThemes));
+    }
+  } catch (error) {
+    console.error("Error updating localStorage during theme update:", error);
+  }
+  
   return updatedTheme;
+};
+
+// Version synchrone pour modifier un thème
+export const updateThemeSync = (id: string, themeData: Partial<Theme>): Theme | null => {
+  try {
+    // Tenter de récupérer les thèmes depuis localStorage
+    const themesJson = localStorage.getItem('themes');
+    if (themesJson) {
+      const themes = JSON.parse(themesJson);
+      if (Array.isArray(themes)) {
+        const themeIndex = themes.findIndex((t: Theme) => t.id === id);
+        if (themeIndex !== -1) {
+          // Conserver le flag isExample s'il existe
+          let isExample = themes[themeIndex].isExample;
+          
+          const updatedTheme: Theme = {
+            ...themes[themeIndex],
+            ...themeData,
+            updatedAt: new Date().toISOString(),
+            // S'assurer que la mise à jour ne retire pas la propriété isExample
+            ...(isExample !== undefined && { isExample })
+          };
+          
+          themes[themeIndex] = updatedTheme;
+          localStorage.setItem('themes', JSON.stringify(themes));
+          
+          // Lancer l'opération asynchrone en arrière-plan
+          setTimeout(async () => {
+            try {
+              await updateTheme(id, themeData);
+              console.log("Theme updated (async)");
+            } catch (error) {
+              console.error("Error updating theme (async):", error);
+            }
+          }, 0);
+          
+          return updatedTheme;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in updateThemeSync:", error);
+  }
+  
+  // Si nous n'avons pas pu mettre à jour en synchrone, lancer quand même l'update asynchrone
+  setTimeout(async () => {
+    try {
+      await updateTheme(id, themeData);
+    } catch (error) {
+      console.error("Error updating theme after sync failure:", error);
+    }
+  }, 0);
+  
+  return null;
 };
 
 export const deleteTheme = async (id: string): Promise<boolean> => {
   const themes = await getThemes();
+  const themeToDelete = themes.find(theme => theme.id === id);
+  
+  if (!themeToDelete) return false;
+  
+  // Permettre la suppression même si c'est un thème d'exemple (id commence par 'temp-')
   const newThemes = themes.filter(theme => theme.id !== id);
   
-  if (newThemes.length === themes.length) return false;
+  // Supprimer aussi de localStorage pour un accès immédiat
+  try {
+    const localThemes = JSON.parse(localStorage.getItem('themes') || '[]');
+    const updatedLocalThemes = localThemes.filter((theme: Theme) => theme.id !== id);
+    localStorage.setItem('themes', JSON.stringify(updatedLocalThemes));
+  } catch (error) {
+    console.error("Error updating themes in localStorage during deletion:", error);
+  }
   
   await IndexedDB.saveData("themes", newThemes);
   
-  // Mettre à jour les flashcards associées
+  // Mettre à jour les flashcards associées - elles ne sont plus liées au thème supprimé
   const flashcards = await getFlashcards();
   const updatedFlashcards = flashcards.map(card => {
     if (card.themeId === id) {
@@ -474,6 +653,20 @@ export const deleteTheme = async (id: string): Promise<boolean> => {
     }
     return card;
   });
+  
+  // Mettre également à jour les flashcards dans localStorage
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    const updatedLocalFlashcards = localFlashcards.map((card: Flashcard) => {
+      if (card.themeId === id) {
+        return { ...card, themeId: undefined };
+      }
+      return card;
+    });
+    localStorage.setItem('flashcards', JSON.stringify(updatedLocalFlashcards));
+  } catch (error) {
+    console.error("Error updating flashcards in localStorage during theme deletion:", error);
+  }
   
   await IndexedDB.saveData("flashcards", updatedFlashcards);
   
@@ -485,9 +678,33 @@ export const getFlashcards = async (): Promise<Flashcard[]> => {
   return await IndexedDB.loadData("flashcards", []);
 };
 
+// Fonction pour récupérer uniquement les flashcards créées par l'utilisateur (non exemples)
+export const getUserFlashcards = async (): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcards();
+  return flashcards.filter(card => !card.isExample);
+};
+
+// Fonction pour récupérer uniquement les flashcards d'exemple
+export const getExampleFlashcards = async (): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcards();
+  return flashcards.filter(card => card.isExample === true);
+};
+
 export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
   const flashcards = await getFlashcards();
   return flashcards.filter(card => card.deckId === deckId);
+};
+
+// Fonction pour récupérer uniquement les flashcards non-exemples d'un deck spécifique
+export const getUserFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcardsByDeck(deckId);
+  return flashcards.filter(card => !card.isExample);
+};
+
+// Fonction pour récupérer uniquement les flashcards exemples d'un deck spécifique
+export const getExampleFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
+  const flashcards = await getFlashcardsByDeck(deckId);
+  return flashcards.filter(card => card.isExample === true);
 };
 
 export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
@@ -525,27 +742,29 @@ export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
     console.error("getFlashcardsByDeckSync: Error accessing localStorage", error);
   }
   
-  // Créer des flashcards temporaires par défaut
+  // Créer des flashcards temporaires par défaut (clairement marquées comme exemples)
   const defaultFlashcards: Flashcard[] = [
     {
-      id: 'temp-' + Date.now(),
+      id: 'example-temp-' + Date.now(),
       deckId: deckId,
       front: "Exemple de question",
       back: "Exemple de réponse",
       hints: ["Ceci est un exemple"],
-      additionalInfo: "Contenu en cours de chargement...",
+      additionalInfo: "Exemple de carte - Cliquez pour voir le verso",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isExample: true // Marqueur pour indiquer que c'est un exemple
     },
     {
-      id: 'temp-' + (Date.now() + 1),
+      id: 'example-temp-' + (Date.now() + 1),
       deckId: deckId,
       front: "Qu'est-ce qu'une flashcard?",
       back: "Une carte avec une question au recto et une réponse au verso.",
       hints: ["Pensez aux outils d'apprentissage"],
-      additionalInfo: "Contenu en cours de chargement...",
+      additionalInfo: "Exemple de carte - Cliquez pour voir le verso",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isExample: true // Marqueur pour indiquer que c'est un exemple
     }
   ];
   
@@ -561,12 +780,14 @@ export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
         const user = await getUser();
         if (user) {
           // Créer quelques flashcards par défaut pour ce deck
+          // Créer des exemples de flashcards clairement identifiés comme tels
           await createFlashcard({
             deckId: deckId,
             front: "Comment utiliser les flashcards?",
             back: "Lisez la question, réfléchissez à la réponse, puis retournez la carte pour vérifier.",
             hints: ["Pensez à la méthode d'apprentissage active"],
-            additionalInfo: "Technique d'apprentissage fondamentale"
+            additionalInfo: "Technique d'apprentissage fondamentale - Exemple",
+            isExample: true
           });
           
           await createFlashcard({
@@ -574,7 +795,8 @@ export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
             front: "Quels sont les avantages des flashcards?",
             back: "Apprentissage actif, répétition espacée, mémorisation efficace, et apprentissage mobile.",
             hints: ["Pensez aux bénéfices pour la mémoire"],
-            additionalInfo: "Technique d'apprentissage fondamentale"
+            additionalInfo: "Technique d'apprentissage fondamentale - Exemple",
+            isExample: true
           });
         }
       }
@@ -603,6 +825,7 @@ export const createFlashcard = async (cardData: Omit<Flashcard, "id" | "createdA
     id: uuidv4(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    // Thème optionnel (peut être undefined)
     ...cardData
   };
   
@@ -615,21 +838,34 @@ export const createFlashcardSync = (cardData: Omit<Flashcard, "id" | "createdAt"
   const newCardId = uuidv4();
   const now = new Date().toISOString();
   
+  // Le thème est désormais optionnel
   const defaultCard: Flashcard = {
     id: newCardId,
     createdAt: now,
     updatedAt: now,
     deckId: cardData.deckId,
-    themeId: cardData.themeId,
+    // Seul le themeId est optionnel, donc on vérifie s'il existe avant de l'ajouter
+    ...(cardData.themeId && { themeId: cardData.themeId }),
     front: cardData.front,
     back: cardData.back,
-    hints: cardData.hints,
+    hints: cardData.hints || [],
     additionalInfo: cardData.additionalInfo,
     frontImage: cardData.frontImage,
     backImage: cardData.backImage,
     frontAudio: cardData.frontAudio,
-    backAudio: cardData.backAudio
+    backAudio: cardData.backAudio,
+    // Préserve le flag isExample si présent
+    ...(cardData as any).isExample && { isExample: true }
   };
+  
+  // Enregistrer automatiquement dans localStorage pour accès immédiat
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    localFlashcards.push(defaultCard);
+    localStorage.setItem('flashcards', JSON.stringify(localFlashcards));
+  } catch (error) {
+    console.error("Error saving flashcard to localStorage:", error);
+  }
   
   // Lancer l'opération asynchrone en arrière-plan
   setTimeout(async () => {
@@ -650,23 +886,107 @@ export const updateFlashcard = async (id: string, cardData: Partial<Flashcard>):
   
   if (cardIndex === -1) return null;
   
+  // Conserver le flag isExample s'il existe
+  let isExample = flashcards[cardIndex].isExample;
+  
   const updatedCard = {
     ...flashcards[cardIndex],
     ...cardData,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // S'assurer que la mise à jour ne retire pas la propriété isExample si elle était déjà présente
+    ...(isExample !== undefined && { isExample })
   };
   
   flashcards[cardIndex] = updatedCard;
   await IndexedDB.saveData("flashcards", flashcards);
   
+  // Mettre à jour également localStorage pour un accès immédiat
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    const localCardIndex = localFlashcards.findIndex((c: Flashcard) => c.id === id);
+    
+    if (localCardIndex !== -1) {
+      localFlashcards[localCardIndex] = updatedCard;
+      localStorage.setItem('flashcards', JSON.stringify(localFlashcards));
+    }
+  } catch (error) {
+    console.error("Error updating localStorage during flashcard update:", error);
+  }
+  
   return updatedCard;
+};
+
+// Version synchrone pour modifier une flashcard
+export const updateFlashcardSync = (id: string, cardData: Partial<Flashcard>): Flashcard | null => {
+  try {
+    // Tenter de récupérer les flashcards depuis localStorage
+    const flashcardsJson = localStorage.getItem('flashcards');
+    if (flashcardsJson) {
+      const flashcards = JSON.parse(flashcardsJson);
+      if (Array.isArray(flashcards)) {
+        const cardIndex = flashcards.findIndex((c: Flashcard) => c.id === id);
+        if (cardIndex !== -1) {
+          // Conserver le flag isExample s'il existe
+          let isExample = flashcards[cardIndex].isExample;
+          
+          const updatedCard: Flashcard = {
+            ...flashcards[cardIndex],
+            ...cardData,
+            updatedAt: new Date().toISOString(),
+            // S'assurer que la mise à jour ne retire pas la propriété isExample
+            ...(isExample !== undefined && { isExample })
+          };
+          
+          flashcards[cardIndex] = updatedCard;
+          localStorage.setItem('flashcards', JSON.stringify(flashcards));
+          
+          // Lancer l'opération asynchrone en arrière-plan
+          setTimeout(async () => {
+            try {
+              await updateFlashcard(id, cardData);
+              console.log("Flashcard updated (async)");
+            } catch (error) {
+              console.error("Error updating flashcard (async):", error);
+            }
+          }, 0);
+          
+          return updatedCard;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in updateFlashcardSync:", error);
+  }
+  
+  // Si nous n'avons pas pu mettre à jour en synchrone, lancer quand même l'update asynchrone
+  setTimeout(async () => {
+    try {
+      await updateFlashcard(id, cardData);
+    } catch (error) {
+      console.error("Error updating flashcard after sync failure:", error);
+    }
+  }, 0);
+  
+  return null;
 };
 
 export const deleteFlashcard = async (id: string): Promise<boolean> => {
   const flashcards = await getFlashcards();
+  const cardToDelete = flashcards.find(card => card.id === id);
+  
+  if (!cardToDelete) return false;
+  
+  // Permettre la suppression même si c'est une flashcard d'exemple (id commence par 'temp-')
   const newFlashcards = flashcards.filter(card => card.id !== id);
   
-  if (newFlashcards.length === flashcards.length) return false;
+  // Supprimer aussi de localStorage pour un accès immédiat
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    const updatedLocalFlashcards = localFlashcards.filter((card: Flashcard) => card.id !== id);
+    localStorage.setItem('flashcards', JSON.stringify(updatedLocalFlashcards));
+  } catch (error) {
+    console.error("Error updating flashcards in localStorage during deletion:", error);
+  }
   
   await IndexedDB.saveData("flashcards", newFlashcards);
   return true;
@@ -1009,25 +1329,67 @@ async function createDefaultDeck(): Promise<string> {
   const user = await getUser();
   if (!user) throw new Error("User not found");
   
-  const deck = await createDeck({
-    authorId: user.id,
-    title: "Introduction à la programmation",
-    description: "Concepts de base de la programmation et du développement logiciel",
-    isPublic: true,
-    tags: ["Programmation", "Informatique", "Débutant"]
-  });
+  // Générer un ID spécial pour les decks d'exemple
+  const exampleDeckId = 'example-' + uuidv4();
   
-  return deck.id;
+  // Créer directement un deck d'exemple avec un ID prédéfini pour pouvoir l'identifier facilement
+  const deck: Deck = {
+    id: exampleDeckId,
+    authorId: user.id,
+    title: "Introduction à la programmation (Exemple)",
+    description: "Cet exemple montre comment organiser un deck de flashcards sur un sujet comme la programmation.",
+    isPublic: true,
+    isExample: true, // Marquer explicitement comme exemple
+    tags: ["Exemple", "Programmation", "Débutant"],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Sauvegarder directement dans le storage
+  const decks = await getDecks();
+  await IndexedDB.saveData("decks", [...decks, deck]);
+  
+  // Également sauvegarder dans localStorage pour un accès immédiat
+  try {
+    const localDecks = JSON.parse(localStorage.getItem('decks') || '[]');
+    localDecks.push(deck);
+    localStorage.setItem('decks', JSON.stringify(localDecks));
+  } catch (error) {
+    console.error("Error saving example deck to localStorage:", error);
+  }
+  
+  return exampleDeckId;
 }
 
 async function createDefaultTheme(deckId: string): Promise<string> {
-  const theme = await createTheme({
-    deckId,
-    title: "Concepts fondamentaux",
-    description: "Les concepts fondamentaux de la programmation"
-  });
+  // Générer un ID spécial pour les thèmes d'exemple
+  const exampleThemeId = 'example-' + uuidv4();
   
-  return theme.id;
+  // Créer directement un thème d'exemple avec un ID prédéfini
+  const theme: Theme = {
+    id: exampleThemeId,
+    deckId,
+    title: "Concepts fondamentaux (Exemple)",
+    description: "Les concepts fondamentaux de la programmation - Exemple de thème",
+    isExample: true, // Marquer explicitement comme exemple
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Sauvegarder directement dans le storage
+  const themes = await getThemes();
+  await IndexedDB.saveData("themes", [...themes, theme]);
+  
+  // Également sauvegarder dans localStorage pour un accès immédiat
+  try {
+    const localThemes = JSON.parse(localStorage.getItem('themes') || '[]');
+    localThemes.push(theme);
+    localStorage.setItem('themes', JSON.stringify(localThemes));
+  } catch (error) {
+    console.error("Error saving example theme to localStorage:", error);
+  }
+  
+  return exampleThemeId;
 }
 
 async function createDefaultFlashcards(deckId: string, themeId: string): Promise<void> {
@@ -1046,15 +1408,41 @@ async function createDefaultFlashcards(deckId: string, themeId: string): Promise
     }
   ];
   
-  for (const cardData of sampleCards) {
-    await createFlashcard({
+  // Créer directement les flashcards avec des IDs identifiables comme exemples
+  const flashcards = await getFlashcards();
+  const newFlashcards: Flashcard[] = [];
+  
+  for (let i = 0; i < sampleCards.length; i++) {
+    const cardData = sampleCards[i];
+    // Générer un ID spécial pour les flashcards d'exemple
+    const exampleCardId = `example-${uuidv4()}`;
+    const now = new Date().toISOString();
+    
+    const flashcard: Flashcard = {
+      id: exampleCardId,
       deckId,
       themeId,
       front: cardData.front,
       back: cardData.back,
       hints: ["Réfléchissez aux concepts de base de la programmation"],
-      additionalInfo: "Concept fondamental de programmation"
-    });
+      additionalInfo: "Concept fondamental de programmation - Exemple",
+      createdAt: now,
+      updatedAt: now,
+      isExample: true // Marquer explicitement comme exemple
+    };
+    
+    newFlashcards.push(flashcard);
+  }
+  
+  // Sauvegarder toutes les flashcards d'exemple en une seule opération
+  await IndexedDB.saveData("flashcards", [...flashcards, ...newFlashcards]);
+  
+  // Également sauvegarder dans localStorage pour un accès immédiat
+  try {
+    const localFlashcards = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    localStorage.setItem('flashcards', JSON.stringify([...localFlashcards, ...newFlashcards]));
+  } catch (error) {
+    console.error("Error saving example flashcards to localStorage:", error);
   }
 }
 
