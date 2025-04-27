@@ -66,7 +66,7 @@ const MyDecksPage = () => {
   }, [location.key]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timer;
+    let intervalId: ReturnType<typeof setInterval>;
     
     async function initialLoad() {
       setLoading(true);

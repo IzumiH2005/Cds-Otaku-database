@@ -22,20 +22,21 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
   const { toast } = useToast();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showFrontAdditionalInfo, setShowFrontAdditionalInfo] = useState(!!card.front.additionalInfo);
-  const [showBackAdditionalInfo, setShowBackAdditionalInfo] = useState(!!card.back.additionalInfo);
+  // Adapter les propriétés de Flashcard pour FlashCardProps
+  const [showFrontAdditionalInfo, setShowFrontAdditionalInfo] = useState(!!card.additionalInfo);
+  const [showBackAdditionalInfo, setShowBackAdditionalInfo] = useState(!!card.additionalInfo);
   const [editingCard, setEditingCard] = useState({
     front: { 
-      text: card.front.text,
-      image: card.front.image,
-      audio: card.front.audio,
-      additionalInfo: card.front.additionalInfo || ""
+      text: card.front || "",
+      image: card.frontImage,
+      audio: card.frontAudio,
+      additionalInfo: card.additionalInfo || ""
     },
     back: { 
-      text: card.back.text,
-      image: card.back.image,
-      audio: card.back.audio,
-      additionalInfo: card.back.additionalInfo || ""
+      text: card.back || "",
+      image: card.backImage,
+      audio: card.backAudio,
+      additionalInfo: card.additionalInfo || ""
     },
   });
 
@@ -154,9 +155,15 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
       };
 
+      // Convertir de l'interface FlashCard à l'interface Flashcard de localStorage
       const updated = await updateFlashcard(card.id, {
-        front: updatedFront,
-        back: updatedBack,
+        front: updatedFront.text,
+        back: updatedBack.text,
+        frontImage: updatedFront.image,
+        backImage: updatedBack.image,
+        frontAudio: updatedFront.audio,
+        backAudio: updatedBack.audio,
+        additionalInfo: updatedFront.additionalInfo || updatedBack.additionalInfo
       });
 
       if (updated) {
@@ -221,7 +228,21 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         </div>
 
         <CardContent className="p-0">
-          <FlashCard {...card} />
+          <FlashCard 
+            id={card.id}
+            front={{
+              text: card.front || "",
+              image: card.frontImage,
+              audio: card.frontAudio,
+              additionalInfo: card.additionalInfo
+            }}
+            back={{
+              text: card.back || "",
+              image: card.backImage,
+              audio: card.backAudio,
+              additionalInfo: card.additionalInfo
+            }}
+          />
         </CardContent>
       </Card>
 
