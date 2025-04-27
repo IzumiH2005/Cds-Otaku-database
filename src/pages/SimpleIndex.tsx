@@ -107,12 +107,15 @@ const SimpleIndex = () => {
           </p>
         </div>
         
-        <div className="mt-8 flex space-x-4">
+        <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <Button asChild variant="outline">
-            <Link to="/basic-test">Aller à la page de test</Link>
+            <Link to="/basic-test">Aller à la page de test basique</Link>
           </Button>
-          <Button asChild>
-            <a href="/">Réessayer la page principale</a>
+          <Button asChild variant="outline">
+            <a href="/?mode=diagnostic">Réessayer en conservant le diagnostic</a>
+          </Button>
+          <Button asChild variant="default">
+            <a href="/?mode=full">Tenter de charger l'application complète</a>
           </Button>
         </div>
       </div>

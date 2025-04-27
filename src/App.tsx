@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { generateSampleData } from "./lib/localStorage";
-import { hasSession } from "./lib/sessionManager";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -33,56 +32,144 @@ import BasicTestPage from "@/pages/BasicTestPage";
 
 const queryClient = new QueryClient();
 
+// Import des fonctions de session
+import { hasSession, hasSessionSync } from "./lib/sessionManager";
+
 // Protected route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   
   useEffect(() => {
+    console.log("ProtectedRoute: Mounting");
+    
+    // Vérification synchrone immédiate
+    try {
+      const validSync = hasSessionSync();
+      console.log("ProtectedRoute: Synchronous check result:", validSync);
+      if (validSync) {
+        setIsValidSession(true);
+        setCheckingSession(false);
+      }
+    } catch (syncError) {
+      console.warn("ProtectedRoute: Synchronous check failed:", syncError);
+      // Continuez avec la vérification asynchrone
+    }
+    
+    // Vérification asynchrone complète
     async function checkSession() {
       try {
+        console.log("ProtectedRoute: Starting async session check");
         const valid = await hasSession();
+        console.log("ProtectedRoute: Async check result:", valid);
         setIsValidSession(valid);
       } catch (error) {
-        console.error("Erreur lors de la vérification de la session:", error);
+        console.error("ProtectedRoute: Error during async session check:", error);
         setIsValidSession(false);
+      } finally {
+        setCheckingSession(false);
       }
     }
     
+    // Commencer la vérification asynchrone
     checkSession();
+    
+    // Timeout de sécurité pour éviter un blocage indéfini
+    const timeoutId = setTimeout(() => {
+      if (checkingSession) {
+        console.warn("ProtectedRoute: Session check timeout, allowing access");
+        setIsValidSession(true);
+        setCheckingSession(false);
+      }
+    }, 3000);
+    
+    return () => clearTimeout(timeoutId);
   }, []);
   
-  if (isValidSession === null) {
+  if (checkingSession) {
     // Session en cours de vérification
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">Vérification de la session...</p>
+        </div>
       </div>
     );
   }
   
-  if (!isValidSession) {
+  if (isValidSession === false) {
+    console.log("ProtectedRoute: Invalid session, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
+  console.log("ProtectedRoute: Valid session, rendering children");
   return <>{children}</>;
 };
 
 const App = () => {
   const [initialized, setInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   
   useEffect(() => {
+    console.log("App: Component mounted");
+    
+    // Essayer de démarrer avec des valeurs locales pour accélérer le rendu initial
+    let localDataInitialized = false;
+    try {
+      // Vérifier si localStorage contient déjà des données
+      if (localStorage.getItem('dataInitialized') === 'true') {
+        console.log("App: Using existing localStorage data");
+        localDataInitialized = true;
+      }
+    } catch (e) {
+      console.warn("App: Error checking localStorage:", e);
+    }
+    
+    // Si des données locales existent, initialiser immédiatement
+    if (localDataInitialized) {
+      console.log("App: Setting initialized from localStorage");
+      setInitialized(true);
+    }
+    
     // Initialize storage structure on first load
     async function initializeApp() {
       try {
+        console.log("App: Starting data initialization");
+        
+        // Générer les données dans IndexedDB et mettre à jour
         await generateSampleData();
+        
+        // Marquer comme initialisé localement pour les prochains chargements
+        try {
+          localStorage.setItem('dataInitialized', 'true');
+        } catch (storageError) {
+          console.warn("App: Error setting localStorage flag:", storageError);
+        }
+        
+        console.log("App: Data initialization completed");
         setInitialized(true);
       } catch (error) {
-        console.error("Erreur lors de l'initialisation des données:", error);
+        console.error("App: Error during data initialization:", error);
+        setInitError(String(error));
         setInitialized(true); // On continue quand même pour ne pas bloquer l'application
       }
     }
     
-    initializeApp();
+    // Lancer l'initialisation asynchrone
+    if (!localDataInitialized) {
+      initializeApp();
+    }
+    
+    // Définir un délai maximum pour ne pas bloquer l'application indéfiniment
+    const timeoutId = setTimeout(() => {
+      if (!initialized) {
+        console.warn("App: Initialization timeout, proceeding anyway");
+        setInitialized(true);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Afficher un écran de chargement pendant l'initialisation

@@ -50,7 +50,18 @@ export const saveSessionKey = async (key: string): Promise<void> => {
 };
 
 export const generateSessionKey = (): string => {
-  return uuidv4();
+  const key = uuidv4();
+  console.log("Generated new session key:", key.substring(0, 5) + '...');
+  
+  // Aussi sauvegarder dans localStorage immédiatement pour garantir l'accès synchrone
+  try {
+    localStorage.setItem(KEYS.SESSION_KEY, key);
+    console.log("Saved new key to localStorage for immediate access");
+  } catch (error) {
+    console.error("Error saving key to localStorage:", error);
+  }
+  
+  return key;
 };
 
 export const verifySession = async (key: string): Promise<boolean> => {
@@ -135,35 +146,89 @@ export const importSessionData = async (data: string): Promise<boolean> => {
 // Ces fonctions lancent des opérations asynchrones en arrière-plan
 
 export const hasSessionSync = (): boolean => {
-  // Retourne toujours true pour compatibilité, mais déclenche l'opération async en background
-  setTimeout(async () => {
-    try {
-      const result = await hasSession();
-      console.log("Session check (async):", result);
-    } catch (error) {
-      console.error("Error checking session (async):", error);
+  try {
+    // Tentative de lecture directe depuis localStorage pour compatibilité
+    const sessionKey = localStorage.getItem(KEYS.SESSION_KEY);
+    
+    // Gestion du cas où sessionKey est défini mais est une chaîne vide
+    const hasValidKey = sessionKey !== null && sessionKey.trim() !== '';
+    
+    if (hasValidKey) {
+      console.log("hasSessionSync: Valid session key found in localStorage");
+    } else {
+      console.log("hasSessionSync: No valid session key in localStorage");
     }
-  }, 0);
-  
-  // Pour la compatibilité, supposons qu'une session existe
-  return true;
+    
+    // Déclenche l'opération asynchrone réelle en arrière-plan sans bloquer
+    setTimeout(async () => {
+      try {
+        const result = await hasSession();
+        console.log("Session check (async):", result);
+        
+        // Si le résultat asynchrone est différent de la vérification synchrone,
+        // on met à jour localStorage pour la cohérence
+        if (result && !hasValidKey) {
+          const key = await getSessionKey();
+          if (key) {
+            localStorage.setItem(KEYS.SESSION_KEY, key);
+            console.log("Updated localStorage with session key from IndexedDB");
+          }
+        }
+      } catch (error) {
+        console.error("Error checking session (async):", error);
+      }
+    }, 0);
+    
+    return hasValidKey;
+  } catch (error) {
+    console.error("Error in hasSessionSync:", error);
+    return false;
+  }
 };
 
 export const getSessionKeySync = (): string => {
-  // Génère une clé temporaire pour compatibilité
-  const tempKey = localStorage.getItem(KEYS.SESSION_KEY) || "temp-session-key";
-  
-  // Déclenche l'opération réelle en arrière-plan
-  setTimeout(async () => {
-    try {
-      const key = await getSessionKey();
-      console.log("Session key retrieved (async):", key);
-    } catch (error) {
-      console.error("Error retrieving session key (async):", error);
+  try {
+    // Lire depuis localStorage pour compatibilité immédiate
+    const sessionKey = localStorage.getItem(KEYS.SESSION_KEY);
+    
+    if (sessionKey) {
+      console.log("getSessionKeySync: Retrieved key from localStorage:", sessionKey.substring(0, 3) + '...');
+    } else {
+      console.log("getSessionKeySync: No key found in localStorage");
     }
-  }, 0);
-  
-  return tempKey;
+    
+    // Déclenche l'opération réelle en arrière-plan sans bloquer
+    setTimeout(async () => {
+      try {
+        const key = await getSessionKey();
+        if (key) {
+          console.log("Session key retrieved (async):", key.substring(0, 3) + '...');
+          
+          // Si la clé est différente de celle en localStorage, mettre à jour localStorage
+          if (key !== sessionKey) {
+            localStorage.setItem(KEYS.SESSION_KEY, key);
+            console.log("Updated localStorage with session key from IndexedDB");
+          }
+        } else {
+          console.log("No session key found in IndexedDB");
+          
+          // Si aucune clé dans IndexedDB mais une clé en localStorage, synchroniser vers IndexedDB
+          if (sessionKey) {
+            await saveSessionKey(sessionKey);
+            console.log("Synchronized localStorage key to IndexedDB");
+          }
+        }
+      } catch (error) {
+        console.error("Error retrieving session key (async):", error);
+      }
+    }, 0);
+    
+    // Retourner la clé de localStorage ou une chaîne vide
+    return sessionKey || "";
+  } catch (error) {
+    console.error("Error in getSessionKeySync:", error);
+    return "";
+  }
 };
 
 export const saveSessionKeySync = (key: string): void => {
@@ -187,42 +252,134 @@ export const generateSessionKeySync = (): string => {
 };
 
 export const exportSessionDataSync = (): string => {
-  // Version synchrone retournant une valeur minimale
-  setTimeout(async () => {
-    try {
-      const data = await exportSessionData();
-      console.log("Session data exported (async)");
-    } catch (error) {
-      console.error("Error exporting session data (async):", error);
+  try {
+    // Tenter de récupérer les données de localStorage pour compatibilité immédiate
+    const sessionKey = localStorage.getItem(KEYS.SESSION_KEY) || "";
+    const exportData = {
+      key: sessionKey,
+      lastActive: new Date().toISOString(),
+      userData: {},
+      exportDate: new Date().toISOString()
+    };
+    
+    // Déclencher l'exportation réelle en arrière-plan
+    setTimeout(async () => {
+      try {
+        const asyncExportData = await exportSessionData();
+        console.log("Session data exported (async) successfully");
+        
+        // Stocker en localStorage pour les futures requêtes synchrones
+        localStorage.setItem('lastExportData', asyncExportData);
+      } catch (error) {
+        console.error("Error exporting session data (async):", error);
+      }
+    }, 0);
+    
+    // Vérifier s'il y a des données d'export précédentes
+    const lastExport = localStorage.getItem('lastExportData');
+    if (lastExport) {
+      return lastExport;
     }
-  }, 0);
-  
-  return JSON.stringify({
-    message: "Opération asynchrone en cours",
-    timestamp: new Date().toISOString()
-  });
+    
+    return JSON.stringify(exportData);
+  } catch (error) {
+    console.error("Error in exportSessionDataSync:", error);
+    return JSON.stringify({
+      key: "",
+      lastActive: new Date().toISOString(),
+      userData: {},
+      exportDate: new Date().toISOString()
+    });
+  }
 };
 
 export const importSessionDataSync = (data: string): boolean => {
-  setTimeout(async () => {
-    try {
-      const result = await importSessionData(data);
-      console.log("Session data import result (async):", result);
-    } catch (error) {
-      console.error("Error importing session data (async):", error);
+  try {
+    // Vérifier que les données sont au bon format
+    const parsedData = JSON.parse(data);
+    if (!parsedData || !parsedData.key) {
+      console.error("Invalid import data format");
+      return false;
     }
-  }, 0);
-  
-  return true;
+    
+    // Mettre à jour localStorage immédiatement pour compatibilité
+    localStorage.setItem(KEYS.SESSION_KEY, parsedData.key);
+    
+    // Lancer l'importation asynchrone en arrière-plan
+    setTimeout(async () => {
+      try {
+        const result = await importSessionData(data);
+        console.log("Session data import result (async):", result);
+      } catch (error) {
+        console.error("Error importing session data (async):", error);
+      }
+    }, 0);
+    
+    return true;
+  } catch (error) {
+    console.error("Error in importSessionDataSync:", error);
+    return false;
+  }
 };
 
 export const verifySessionSync = (key: string): boolean => {
-  setTimeout(async () => {
-    const result = await verifySession(key);
-    console.log("Session verification result (async):", result);
-  }, 0);
-  
-  return true;
+  try {
+    if (!key || key.trim() === '') {
+      console.log("verifySessionSync: No key provided, session invalid");
+      return false;
+    }
+
+    // Vérification simple et immédiate pour compatibilité avec localStorage
+    const currentKey = localStorage.getItem(KEYS.SESSION_KEY);
+    
+    // Validation plus stricte
+    if (!currentKey || currentKey.trim() === '') {
+      console.log("verifySessionSync: No key in localStorage to verify against");
+      
+      // Si aucune clé en localStorage, mais qu'une clé est fournie, on la considère valide
+      // et on la sauvegarde en localStorage pour faciliter la migration
+      localStorage.setItem(KEYS.SESSION_KEY, key);
+      console.log("verifySessionSync: Saved provided key to localStorage");
+      
+      // Lancer la vérification asynchrone en arrière-plan
+      setTimeout(async () => {
+        try {
+          // Sauvegarder la clé en IndexedDB
+          await saveSessionKey(key);
+          console.log("verifySessionSync: Saved key to IndexedDB asynchronously");
+        } catch (asyncError) {
+          console.error("Error in verifySessionSync async operation:", asyncError);
+        }
+      }, 0);
+      
+      return true;
+    }
+    
+    // Si les deux clés existent, les comparer
+    const isValid = key === currentKey;
+    console.log("verifySessionSync: Key validation result:", isValid);
+    
+    // Déclencher la vérification asynchrone complète en arrière-plan
+    setTimeout(async () => {
+      try {
+        const result = await verifySession(key);
+        console.log("Session verification result (async):", result);
+        
+        // Si les résultats sont différents, mettre à jour localStorage
+        if (result && !isValid) {
+          localStorage.setItem(KEYS.SESSION_KEY, key);
+          console.log("verifySessionSync: Updated localStorage with valid key from async check");
+        }
+      } catch (error) {
+        console.error("Error verifying session (async):", error);
+      }
+    }, 0);
+    
+    return isValid;
+  } catch (error) {
+    console.error("Error in verifySessionSync:", error);
+    return false;
+  }
 };
 
 // Fonctions d'étude et de statistiques

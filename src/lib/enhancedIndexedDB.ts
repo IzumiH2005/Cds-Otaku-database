@@ -1,12 +1,21 @@
 /**
  * Module d'amélioration d'IndexedDB permettant de stocker des quantités importantes de données
  * sans les limitations de localStorage (5MB)
+ * 
+ * Comprend un système de sauvegarde automatique via localStorage pour garantir 
+ * l'accès aux données critiques en cas de problème avec IndexedDB
  */
+
+// Import du système de sauvegarde
+import { backupData, getBackupData, hasBackup } from './storageBackup';
 
 // Constantes pour la base de données
 const DB_NAME = 'cds-flashcard-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'app-data';
+
+// Indication si IndexedDB est disponible et fonctionnel
+let isIndexedDBAvailable = true;
 
 /**
  * Initialise la base de données IndexedDB avec la structure nécessaire.
@@ -100,6 +109,7 @@ const writeTransaction = async <T>(callback: (store: IDBObjectStore) => IDBReque
  */
 export async function saveData<T>(key: string, data: T): Promise<void> {
   try {
+    // Tentative de sauvegarde dans IndexedDB
     await writeTransaction(store => 
       store.put({
         key,
@@ -107,8 +117,24 @@ export async function saveData<T>(key: string, data: T): Promise<void> {
         lastUpdated: new Date().toISOString()
       })
     );
+    
+    // Sauvegarde de secours dans localStorage
+    backupData(key, data);
+    
+    // IndexedDB est fonctionnel
+    isIndexedDBAvailable = true;
   } catch (error) {
+    // IndexedDB a échoué
+    isIndexedDBAvailable = false;
     console.error(`Erreur lors de la sauvegarde de données pour ${key}:`, error);
+    
+    // Sauvegarde de secours dans localStorage malgré l'erreur
+    try {
+      backupData(key, data);
+      console.log(`Backup créé pour ${key} malgré l'échec d'IndexedDB`);
+    } catch (backupError) {
+      console.error(`Échec complet de sauvegarde pour ${key}:`, backupError);
+    }
   }
 }
 
@@ -120,13 +146,50 @@ export async function saveData<T>(key: string, data: T): Promise<void> {
  */
 export async function loadData<T>(key: string, defaultValue: T): Promise<T> {
   try {
+    // Si IndexedDB a échoué précédemment, utiliser directement localStorage
+    if (!isIndexedDBAvailable) {
+      if (hasBackup(key)) {
+        console.log(`Utilisation du backup localStorage pour ${key} (IndexedDB indisponible)`);
+        return getBackupData<T>(key, defaultValue);
+      }
+      return defaultValue;
+    }
+    
+    // Tentative de chargement depuis IndexedDB
     const result = await readTransaction<{ key: string, value: T } | undefined>(store => 
       store.get(key)
     );
     
-    return result ? result.value : defaultValue;
+    if (result) {
+      // Mettre à jour la sauvegarde avec les données récentes
+      backupData(key, result.value);
+      return result.value;
+    } else if (hasBackup(key)) {
+      // Si données présentes dans localStorage mais pas dans IndexedDB
+      const backupValue = getBackupData<T>(key, defaultValue);
+      console.log(`Restauration depuis backup localStorage pour ${key}`);
+      
+      // Sauvegarder en IndexedDB pour la prochaine fois
+      setTimeout(() => {
+        saveData(key, backupValue).catch(e => 
+          console.error(`Erreur lors de la restauration en IndexedDB pour ${key}:`, e)
+        );
+      }, 0);
+      
+      return backupValue;
+    }
+    
+    return defaultValue;
   } catch (error) {
     console.error(`Erreur lors du chargement de données pour ${key}:`, error);
+    isIndexedDBAvailable = false;
+    
+    // Tentative de récupération depuis localStorage
+    if (hasBackup(key)) {
+      console.log(`Récupération depuis backup localStorage après erreur pour ${key}`);
+      return getBackupData<T>(key, defaultValue);
+    }
+    
     return defaultValue;
   }
 }

@@ -77,65 +77,130 @@ const renderApp = () => {
     return;
   }
   
+  // Vérifier le mode d'exécution (complet ou diagnostic)
+  const urlParams = new URLSearchParams(window.location.search);
+  const mode = urlParams.get('mode');
+  const shouldUseFullApp = mode === 'full';
+  
   try {
-    logInfo('Rendering simplified app for diagnostic...');
-    
-    // Utiliser SimpleIndex pour test et diagnostic - une page simplifiée sans dépendances complexes
-    createRoot(rootElement).render(
-      <HashRouter>
-        <SimpleIndex />
-      </HashRouter>
-    );
-    
-    logInfo('Simple app rendered successfully');
-    
-    // Ajouter un message pour indiquer que nous n'utilisons pas l'application complète
-    const diagMessage = document.createElement('div');
-    diagMessage.style.position = 'fixed';
-    diagMessage.style.top = '10px';
-    diagMessage.style.left = '10px';
-    diagMessage.style.padding = '10px';
-    diagMessage.style.backgroundColor = 'rgba(255, 200, 0, 0.9)';
-    diagMessage.style.color = 'black';
-    diagMessage.style.borderRadius = '5px';
-    diagMessage.style.fontFamily = 'sans-serif';
-    diagMessage.style.fontSize = '14px';
-    diagMessage.style.zIndex = '9999';
-    diagMessage.style.maxWidth = '300px';
-    diagMessage.innerHTML = '<strong>Mode diagnostic</strong><br>Interface simplifiée chargée pour résoudre les problèmes.<br><a href="/" style="color: blue;">Réessayer l\'application complète</a>';
-    
-    document.body.appendChild(diagMessage);
+    if (shouldUseFullApp) {
+      logInfo('Attempting to render full application as requested...');
+      
+      // Utiliser l'application complète
+      createRoot(rootElement).render(<App />);
+      
+      logInfo('Full app rendered successfully');
+      
+      // Ajouter un message pour indiquer que nous sommes en mode complet avec diagnostic
+      const fullModeMessage = document.createElement('div');
+      fullModeMessage.style.position = 'fixed';
+      fullModeMessage.style.top = '10px';
+      fullModeMessage.style.left = '10px';
+      fullModeMessage.style.padding = '10px';
+      fullModeMessage.style.backgroundColor = 'rgba(0, 180, 0, 0.8)';
+      fullModeMessage.style.color = 'white';
+      fullModeMessage.style.borderRadius = '5px';
+      fullModeMessage.style.fontFamily = 'sans-serif';
+      fullModeMessage.style.fontSize = '14px';
+      fullModeMessage.style.zIndex = '9999';
+      fullModeMessage.style.maxWidth = '300px';
+      fullModeMessage.innerHTML = '<strong>Application complète</strong><br>L\'application complète est chargée.<br><a href="/?mode=diagnostic" style="color: yellow;">Revenir au mode diagnostic</a>';
+      
+      document.body.appendChild(fullModeMessage);
+    } else {
+      logInfo('Rendering simplified app for diagnostic...');
+      
+      // Utiliser SimpleIndex pour test et diagnostic - une page simplifiée sans dépendances complexes
+      createRoot(rootElement).render(
+        <HashRouter>
+          <SimpleIndex />
+        </HashRouter>
+      );
+      
+      logInfo('Simple app rendered successfully');
+      
+      // Ajouter un message pour indiquer que nous n'utilisons pas l'application complète
+      const diagMessage = document.createElement('div');
+      diagMessage.style.position = 'fixed';
+      diagMessage.style.top = '10px';
+      diagMessage.style.left = '10px';
+      diagMessage.style.padding = '10px';
+      diagMessage.style.backgroundColor = 'rgba(255, 200, 0, 0.9)';
+      diagMessage.style.color = 'black';
+      diagMessage.style.borderRadius = '5px';
+      diagMessage.style.fontFamily = 'sans-serif';
+      diagMessage.style.fontSize = '14px';
+      diagMessage.style.zIndex = '9999';
+      diagMessage.style.maxWidth = '300px';
+      diagMessage.innerHTML = '<strong>Mode diagnostic</strong><br>Interface simplifiée chargée pour résoudre les problèmes.<br><a href="/?mode=full" style="color: blue;">Tenter de charger l\'application complète</a>';
+      
+      document.body.appendChild(diagMessage);
+    }
   } catch (renderError) {
-    console.error('Error rendering Simple App:', renderError);
-    logInfo('Error rendering Simple App: ' + String(renderError));
+    console.error('Error rendering app:', renderError);
+    logInfo('Error rendering app: ' + String(renderError));
     
     // Afficher une page d'erreur basique
     rootElement.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
         <h1 style="color: #d32f2f;">Erreur lors du démarrage de l'application</h1>
-        <p>Une erreur est survenue pendant le chargement même de la version simplifiée. Cela indique un problème sérieux.</p>
+        <p>Une erreur est survenue pendant le chargement${shouldUseFullApp ? ' de l\'application complète' : ' de la version simplifiée'}. </p>
         <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; max-width: 80%; overflow: auto;">${String(renderError)}</pre>
-        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">Recharger</button>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button onclick="location.reload()" style="padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">Recharger</button>
+          ${shouldUseFullApp ? '<a href="/?mode=diagnostic" style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 4px; text-decoration: none;">Revenir au mode diagnostic</a>' : ''}
+        </div>
       </div>
     `;
   }
 };
 
-// Initialiser IndexedDB avant de rendre l'application
-logInfo('Initializing IndexedDB...');
+// Initialiser IndexedDB et le système de sauvegarde avant de rendre l'application
+logInfo('Initializing storage systems...');
 
 // Vérifier si IndexedDB est disponible
 if (typeof indexedDB === 'undefined') {
   logInfo('IndexedDB is not available in this browser!');
-  renderApp(); // Rendre l'application quand même
-} else {
-  // Essayer d'initialiser IndexedDB
-  import('./lib/enhancedIndexedDB').then(() => {
-    logInfo('IndexedDB initialized successfully');
+  
+  // Initialiser uniquement le système de sauvegarde
+  import('./lib/storageBackup').then(({ initBackupSystem }) => {
+    logInfo('Backup system initialized (using localStorage only)');
+    initBackupSystem();
     renderApp();
   }).catch(error => {
-    console.error('Error initializing IndexedDB:', error);
-    logInfo('Error initializing IndexedDB: ' + String(error));
+    console.error('Error initializing backup system:', error);
+    logInfo('Error initializing backup system: ' + String(error));
     renderApp(); // Rendre l'application malgré l'erreur
+  });
+} else {
+  // Initialiser à la fois IndexedDB et le système de sauvegarde
+  Promise.all([
+    import('./lib/enhancedIndexedDB'),
+    import('./lib/storageBackup')
+  ]).then(([indexedDBModule, backupModule]) => {
+    logInfo('IndexedDB initialized successfully');
+    backupModule.initBackupSystem();
+    logInfo('Backup system initialized and synchronized with IndexedDB');
+    
+    // Vérifier s'il y a des données à récupérer depuis localStorage
+    const sessionKey = localStorage.getItem('sessionKey');
+    if (sessionKey) {
+      logInfo('Existing session found in localStorage, will be synchronized with IndexedDB');
+    }
+    
+    renderApp();
+  }).catch(error => {
+    console.error('Error initializing storage systems:', error);
+    logInfo('Error initializing storage systems: ' + String(error));
+    
+    // Tenter d'initialiser uniquement le système de sauvegarde
+    import('./lib/storageBackup').then(({ initBackupSystem }) => {
+      logInfo('Fallback to backup system only');
+      initBackupSystem();
+      renderApp();
+    }).catch(() => {
+      logInfo('Complete storage initialization failure!');
+      renderApp(); // Rendre l'application malgré l'erreur
+    });
   });
 }

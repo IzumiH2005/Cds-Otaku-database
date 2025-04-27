@@ -42,7 +42,8 @@ const Index = () => {
   }, []);
 
   const handleCopyKey = () => {
-    const currentSessionKey = getSessionKeySync();
+    // Utiliser getSessionKey au lieu de getSessionKeySync pour éviter les erreurs
+    const currentSessionKey = sessionKey;
     if (currentSessionKey) {
       navigator.clipboard.writeText(currentSessionKey);
       setIsCopied(true);
@@ -56,9 +57,21 @@ const Index = () => {
   };
   
   const handleGenerateKey = () => {
-    const newKey = generateSessionKeySync();
-    saveSessionKeySync(newKey);
+    // Génération synchrone
+    const newKey = generateSessionKey();
+    
+    // Mettre à jour l'état local immédiatement
     setSessionKey(newKey);
+    
+    // Sauvegarder en arrière-plan
+    setTimeout(async () => {
+      try {
+        await saveSessionKey(newKey);
+        console.log("Session key saved asynchronously");
+      } catch (err) {
+        console.error("Failed to save session key asynchronously:", err);
+      }
+    }, 0);
     
     toast({
       title: "Nouvelle clé générée!",
