@@ -29,6 +29,7 @@ import StatsPage from "@/pages/StatsPage";
 import SharePage from "@/pages/SharePage";
 import MyDecksPage from "@/pages/MyDecksPage";
 import TestIndexedDBPage from "@/pages/TestIndexedDBPage";
+import BasicTestPage from "@/pages/BasicTestPage";
 
 const queryClient = new QueryClient();
 
@@ -285,6 +286,8 @@ const App = () => {
                   <Footer />
                 </>
               } />
+              
+              <Route path="/basic-test" element={<BasicTestPage />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
