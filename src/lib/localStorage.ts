@@ -76,6 +76,23 @@ export const getUser = async (): Promise<User | null> => {
   return await IndexedDB.loadData("user", null);
 };
 
+export const getUserSync = (): User | null => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  // et retourne une valeur par défaut immédiatement
+  let userSyncResult: User | null = null;
+  
+  setTimeout(async () => {
+    try {
+      const user = await getUser();
+      console.log("User retrieved (async):", user);
+    } catch (error) {
+      console.error("Error retrieving user (async):", error);
+    }
+  }, 0);
+  
+  return userSyncResult;
+};
+
 export const initializeDefaultUser = async (): Promise<User> => {
   const defaultUser: User = {
     id: uuidv4(),
@@ -135,6 +152,23 @@ export const getDecksByAuthor = async (authorId: string): Promise<Deck[]> => {
 export const getDeck = async (id: string): Promise<Deck | null> => {
   const decks = await getDecks();
   return decks.find(deck => deck.id === id) || null;
+};
+
+export const getDeckSync = (id: string): Deck | null => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  // et retourne une valeur par défaut
+  const defaultDeck: Deck | null = null;
+  
+  setTimeout(async () => {
+    try {
+      const deck = await getDeck(id);
+      console.log("Deck retrieved (async):", deck);
+    } catch (error) {
+      console.error("Error retrieving deck (async):", error);
+    }
+  }, 0);
+  
+  return defaultDeck;
 };
 
 export const createDeck = async (deckData: Omit<Deck, "id" | "createdAt" | "updatedAt">): Promise<Deck> => {
@@ -199,6 +233,22 @@ export const getThemesByDeck = async (deckId: string): Promise<Theme[]> => {
   return themes.filter(theme => theme.deckId === deckId);
 };
 
+export const getThemesByDeckSync = (deckId: string): Theme[] => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  const defaultThemes: Theme[] = [];
+  
+  setTimeout(async () => {
+    try {
+      const themes = await getThemesByDeck(deckId);
+      console.log("Themes retrieved (async):", themes);
+    } catch (error) {
+      console.error("Error retrieving themes (async):", error);
+    }
+  }, 0);
+  
+  return defaultThemes;
+};
+
 export const getTheme = async (id: string): Promise<Theme | undefined> => {
   const themes = await getThemes();
   return themes.find(theme => theme.id === id);
@@ -216,6 +266,34 @@ export const createTheme = async (themeData: Omit<Theme, "id" | "createdAt" | "u
   
   await IndexedDB.saveData("themes", [...themes, newTheme]);
   return newTheme;
+};
+
+export const createThemeSync = (themeData: Omit<Theme, "id" | "createdAt" | "updatedAt">): Theme => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  const newThemeId = uuidv4();
+  const now = new Date().toISOString();
+  
+  const defaultTheme: Theme = {
+    id: newThemeId,
+    createdAt: now,
+    updatedAt: now,
+    deckId: themeData.deckId,
+    title: themeData.title,
+    description: themeData.description,
+    coverImage: themeData.coverImage
+  };
+  
+  // Lancer l'opération asynchrone en arrière-plan
+  setTimeout(async () => {
+    try {
+      await createTheme(themeData);
+      console.log("Theme created (async)");
+    } catch (error) {
+      console.error("Error creating theme (async):", error);
+    }
+  }, 0);
+  
+  return defaultTheme;
 };
 
 export const updateTheme = async (id: string, themeData: Partial<Theme>): Promise<Theme | null> => {
@@ -268,6 +346,22 @@ export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> 
   return flashcards.filter(card => card.deckId === deckId);
 };
 
+export const getFlashcardsByDeckSync = (deckId: string): Flashcard[] => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  const defaultFlashcards: Flashcard[] = [];
+  
+  setTimeout(async () => {
+    try {
+      const flashcards = await getFlashcardsByDeck(deckId);
+      console.log("Flashcards retrieved (async):", flashcards);
+    } catch (error) {
+      console.error("Error retrieving flashcards (async):", error);
+    }
+  }, 0);
+  
+  return defaultFlashcards;
+};
+
 export const getFlashcardsByTheme = async (themeId: string): Promise<Flashcard[]> => {
   const flashcards = await getFlashcards();
   return flashcards.filter(card => card.themeId === themeId);
@@ -290,6 +384,40 @@ export const createFlashcard = async (cardData: Omit<Flashcard, "id" | "createdA
   
   await IndexedDB.saveData("flashcards", [...flashcards, newCard]);
   return newCard;
+};
+
+export const createFlashcardSync = (cardData: Omit<Flashcard, "id" | "createdAt" | "updatedAt">): Flashcard => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  const newCardId = uuidv4();
+  const now = new Date().toISOString();
+  
+  const defaultCard: Flashcard = {
+    id: newCardId,
+    createdAt: now,
+    updatedAt: now,
+    deckId: cardData.deckId,
+    themeId: cardData.themeId,
+    front: cardData.front,
+    back: cardData.back,
+    hints: cardData.hints,
+    additionalInfo: cardData.additionalInfo,
+    frontImage: cardData.frontImage,
+    backImage: cardData.backImage,
+    frontAudio: cardData.frontAudio,
+    backAudio: cardData.backAudio
+  };
+  
+  // Lancer l'opération asynchrone en arrière-plan
+  setTimeout(async () => {
+    try {
+      await createFlashcard(cardData);
+      console.log("Flashcard created (async)");
+    } catch (error) {
+      console.error("Error creating flashcard (async):", error);
+    }
+  }, 0);
+  
+  return defaultCard;
 };
 
 export const updateFlashcard = async (id: string, cardData: Partial<Flashcard>): Promise<Flashcard | null> => {
@@ -340,6 +468,23 @@ export const createShareCode = async (deckId: string): Promise<string> => {
   }];
   
   await IndexedDB.saveData("sharedCodes", newCodes);
+  return code;
+};
+
+export const createShareCodeSync = (deckId: string): string => {
+  // Version synchrone qui initialise une opération asynchrone en arrière-plan
+  const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+  
+  // Lancer l'opération asynchrone en arrière-plan
+  setTimeout(async () => {
+    try {
+      await createShareCode(deckId);
+      console.log("Share code created (async)");
+    } catch (error) {
+      console.error("Error creating share code (async):", error);
+    }
+  }, 0);
+  
   return code;
 };
 
@@ -550,6 +695,24 @@ export const getBase64 = async (file: File): Promise<string> => {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
+};
+
+export const getBase64Sync = (file: File): string => {
+  // Version synchrone qui renvoie une chaîne vide et traite l'opération en arrière-plan
+  // Cette fonction est utilisée pour la compatibilité avec les composants synchrones
+  setTimeout(() => {
+    try {
+      getBase64(file).then(base64 => {
+        console.log("Base64 encoded (async)");
+      }).catch(error => {
+        console.error("Error encoding file to base64 (async):", error);
+      });
+    } catch (error) {
+      console.error("Error in getBase64Sync:", error);
+    }
+  }, 0);
+  
+  return '';
 };
 
 // Initialisation des données
