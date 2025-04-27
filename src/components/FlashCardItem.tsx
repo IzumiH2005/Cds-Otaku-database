@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, Save, X } from "lucide-react";
-import { updateFlashcardSync as updateFlashcard, deleteFlashcardSync as deleteFlashcard, Flashcard, getBase64Sync as getBase64 } from "@/lib/localStorage";
+import { updateFlashcard, deleteFlashcard, Flashcard, getBase64 } from "@/lib/localStorage";
 import FlashCard from "./FlashCard";
 
 interface FlashCardItemProps {
@@ -39,7 +39,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     },
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -53,7 +53,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         return;
       }
 
-      const base64 = getBase64(file);
+      const base64 = await getBase64(file);
       if (side === 'front') {
         setEditingCard({
           ...editingCard,
@@ -75,7 +75,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -98,7 +98,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         return;
       }
 
-      const base64 = getBase64(file);
+      const base64 = await getBase64(file);
       if (side === 'front') {
         setEditingCard({
           ...editingCard,
@@ -120,7 +120,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingCard.front.text.trim() && !editingCard.front.image) {
       toast({
         title: "Contenu requis",
@@ -154,7 +154,7 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
         additionalInfo: showBackAdditionalInfo ? editingCard.back.additionalInfo.trim() : undefined
       };
 
-      const updated = updateFlashcard(card.id, {
+      const updated = await updateFlashcard(card.id, {
         front: updatedFront,
         back: updatedBack,
       });
@@ -177,9 +177,9 @@ const FlashCardItem = ({ card, onDelete, onUpdate }: FlashCardItemProps) => {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-      const success = deleteFlashcard(card.id);
+      const success = await deleteFlashcard(card.id);
       if (success) {
         setShowDeleteDialog(false);
         onDelete?.();

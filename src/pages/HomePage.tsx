@@ -5,33 +5,45 @@ import { ChevronRightIcon, Globe, Plus, TrendingUp, BookOpen, ArrowRight } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import DeckCard, { DeckCardProps } from "@/components/DeckCard";
-import { getDecksSync as getDecks, getUserSync as getUser, User } from "@/lib/localStorage";
+import { getDecks, getUser, User } from "@/lib/localStorage";
 
 const HomePage = () => {
   const [recentDecks, setRecentDecks] = useState<DeckCardProps[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = getUser();
-    setUser(userData);
+    async function loadData() {
+      try {
+        setLoading(true);
+        const userData = await getUser();
+        setUser(userData);
 
-    // Get all decks and sort by recent
-    const allDecks = getDecks();
-    const deckCards = allDecks
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 6)
-      .map(deck => ({
-        id: deck.id,
-        title: deck.title,
-        description: deck.description,
-        coverImage: deck.coverImage,
-        cardCount: 0, // Will be filled in next step
-        tags: deck.tags,
-        author: userData?.name || "Anonyme",
-        isPublic: deck.isPublic,
-      }));
+        // Get all decks and sort by recent
+        const allDecks = await getDecks();
+        const deckCards = allDecks
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 6)
+          .map(deck => ({
+            id: deck.id,
+            title: deck.title,
+            description: deck.description,
+            coverImage: deck.coverImage,
+            cardCount: 0, // Will be filled in next step
+            tags: deck.tags,
+            author: userData?.name || "Anonyme",
+            isPublic: deck.isPublic,
+          }));
 
-    setRecentDecks(deckCards);
+        setRecentDecks(deckCards);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
   }, []);
 
   return (
@@ -119,18 +131,24 @@ const HomePage = () => {
       </section>
 
       {/* Recent Decks Section */}
-      {recentDecks.length > 0 && (
-        <section className="py-16 bg-secondary/30">
-          <div className="container px-4 mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold">Decks récents</h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/explore" className="flex items-center">
-                  Voir tous les decks
-                  <ChevronRightIcon className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
+      <section className="py-16 bg-secondary/30">
+        <div className="container px-4 mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold">Decks récents</h2>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/explore" className="flex items-center">
+                Voir tous les decks
+                <ChevronRightIcon className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+              <span className="ml-3 text-muted-foreground">Chargement des decks...</span>
             </div>
+          ) : recentDecks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentDecks.map((deck) => (
                 <DeckCard
@@ -146,9 +164,16 @@ const HomePage = () => {
                 />
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-lg text-muted-foreground">Aucun deck récent trouvé.</p>
+              <Button asChild className="mt-4">
+                <Link to="/create">Créer mon premier deck</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Call to Action */}
       <section className="py-20 bg-gradient-to-r from-accent/20 via-background to-primary/20">

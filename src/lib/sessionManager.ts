@@ -8,10 +8,18 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as IndexedDB from './enhancedIndexedDB';
 
-// Constantes
-const SESSION_KEY = 'sessionKey';
-const SESSION_DATA_PREFIX = 'session_';
-const USER_DATA_KEY = 'userData';
+// Configuration exportée pour l'accès global
+export const DB_CONFIG = {
+  NAME: 'cds-flashcard-db',
+  VERSION: 1,
+  STORE_NAME: 'app-data',
+};
+
+export const KEYS = {
+  SESSION_KEY: 'sessionKey',
+  SESSION_DATA_PREFIX: 'session_',
+  USER_DATA_KEY: 'userData',
+};
 
 // Interfaces
 interface SessionData {
@@ -28,14 +36,14 @@ export const hasSession = async (): Promise<boolean> => {
 };
 
 export const getSessionKey = async (): Promise<string | null> => {
-  return await IndexedDB.loadData(SESSION_KEY, null);
+  return await IndexedDB.loadData(KEYS.SESSION_KEY, null);
 };
 
 export const saveSessionKey = async (key: string): Promise<void> => {
-  await IndexedDB.saveData(SESSION_KEY, key);
+  await IndexedDB.saveData(KEYS.SESSION_KEY, key);
   
   // Enregistrer des métadonnées de session
-  await IndexedDB.saveData(`${SESSION_DATA_PREFIX}${key}`, {
+  await IndexedDB.saveData(`${KEYS.SESSION_DATA_PREFIX}${key}`, {
     key,
     lastActive: new Date().toISOString()
   });
@@ -60,7 +68,7 @@ export const exportSessionData = async (): Promise<string> => {
     }
     
     // Récupérer les données utilisateur
-    const userData = await IndexedDB.loadData(USER_DATA_KEY, {});
+    const userData = await IndexedDB.loadData(KEYS.USER_DATA_KEY, {});
     
     // Récupérer les données de decks, thèmes et flashcards
     const decks = await IndexedDB.loadData("decks", []);
@@ -100,7 +108,7 @@ export const importSessionData = async (data: string): Promise<boolean> => {
     
     // Sauvegarder les données utilisateur
     if (importedData.userData) {
-      await IndexedDB.saveData(USER_DATA_KEY, importedData.userData);
+      await IndexedDB.saveData(KEYS.USER_DATA_KEY, importedData.userData);
     }
     
     // Sauvegarder les decks, thèmes et flashcards
@@ -140,7 +148,28 @@ export const hasSessionSync = (): boolean => {
 export const getSessionKeySync = (): string => {
   // Version synchrone qui retourne une valeur par défaut
   // L'opération asynchrone réelle sera gérée séparément
-  const fallbackKey = localStorage.getItem(SESSION_KEY) || "session-key-placeholder";
+  let fallbackKey = "session-key-placeholder";
+  
+  try {
+    // Essayer de lire depuis IndexedDB de façon synchrone (non recommandé)
+    const dbPromise = window.indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+    const fallbackData = { key: fallbackKey };
+    
+    dbPromise.onsuccess = (event) => {
+      const db = dbPromise.result;
+      const transaction = db.transaction(DB_CONFIG.STORE_NAME, 'readonly');
+      const store = transaction.objectStore(DB_CONFIG.STORE_NAME);
+      const request = store.get(KEYS.SESSION_KEY);
+      
+      request.onsuccess = () => {
+        if (request.result && request.result.value) {
+          fallbackKey = request.result.value;
+        }
+      };
+    };
+  } catch (error) {
+    console.error("Erreur lors de la tentative de lecture synchrone:", error);
+  }
   
   setTimeout(async () => {
     const key = await getSessionKey();
@@ -151,8 +180,25 @@ export const getSessionKeySync = (): string => {
 };
 
 export const saveSessionKeySync = (key: string): void => {
-  // Pour assurer un minimum de fonctionnalité, nous stockons aussi dans localStorage
-  localStorage.setItem(SESSION_KEY, key);
+  // Version synchrone, uniquement IndexedDB sans localStorage
+  try {
+    // Tentative de sauvegarde synchrone
+    const dbPromise = window.indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+    
+    dbPromise.onsuccess = (event) => {
+      const db = dbPromise.result;
+      const transaction = db.transaction(DB_CONFIG.STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(DB_CONFIG.STORE_NAME);
+      
+      store.put({
+        key: KEYS.SESSION_KEY,
+        value: key,
+        lastUpdated: new Date().toISOString()
+      });
+    };
+  } catch (error) {
+    console.error("Erreur lors de la tentative d'écriture synchrone:", error);
+  }
   
   // Lancer l'opération asynchrone en arrière-plan
   setTimeout(async () => {
@@ -208,7 +254,7 @@ export const verifySessionSync = (key: string): boolean => {
 // Fonctions d'étude et de statistiques
 export const recordCardStudy = async (correct: boolean): Promise<void> => {
   try {
-    const userData = await IndexedDB.loadData(USER_DATA_KEY, {
+    const userData = await IndexedDB.loadData(KEYS.USER_DATA_KEY, {
       stats: {
         cardsStudied: 0,
         correctAnswers: 0,
@@ -235,7 +281,7 @@ export const recordCardStudy = async (correct: boolean): Promise<void> => {
     }
     
     // Sauvegarder les modifications
-    await IndexedDB.saveData(USER_DATA_KEY, userData);
+    await IndexedDB.saveData(KEYS.USER_DATA_KEY, userData);
   } catch (error) {
     console.error("Erreur lors de l'enregistrement de l'étude:", error);
   }
@@ -247,7 +293,7 @@ export const updateSessionStats = async (stats: Partial<{
   lastStudyDate: string;
 }>): Promise<void> => {
   try {
-    const userData = await IndexedDB.loadData(USER_DATA_KEY, {
+    const userData = await IndexedDB.loadData(KEYS.USER_DATA_KEY, {
       stats: {
         studySessions: 0,
         totalStudyTime: 0,
@@ -278,7 +324,7 @@ export const updateSessionStats = async (stats: Partial<{
     }
     
     // Sauvegarder les modifications
-    await IndexedDB.saveData(USER_DATA_KEY, userData);
+    await IndexedDB.saveData(KEYS.USER_DATA_KEY, userData);
   } catch (error) {
     console.error("Erreur lors de la mise à jour des statistiques de session:", error);
   }

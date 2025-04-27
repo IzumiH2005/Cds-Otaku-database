@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { generateSampleDataSync as generateSampleData } from "./lib/localStorage";
-import { hasSessionSync as hasSession } from "./lib/sessionManager";
+import { generateSampleData } from "./lib/localStorage";
+import { hasSession } from "./lib/sessionManager";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -34,7 +34,32 @@ const queryClient = new QueryClient();
 
 // Protected route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  if (!hasSession()) {
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const valid = await hasSession();
+        setIsValidSession(valid);
+      } catch (error) {
+        console.error("Erreur lors de la vérification de la session:", error);
+        setIsValidSession(false);
+      }
+    }
+    
+    checkSession();
+  }, []);
+  
+  if (isValidSession === null) {
+    // Session en cours de vérification
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+  
+  if (!isValidSession) {
     return <Navigate to="/login" replace />;
   }
   
@@ -42,10 +67,32 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
+  const [initialized, setInitialized] = useState(false);
+  
   useEffect(() => {
     // Initialize storage structure on first load
-    generateSampleData();
+    async function initializeApp() {
+      try {
+        await generateSampleData();
+        setInitialized(true);
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation des données:", error);
+        setInitialized(true); // On continue quand même pour ne pas bloquer l'application
+      }
+    }
+    
+    initializeApp();
   }, []);
+
+  // Afficher un écran de chargement pendant l'initialisation
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <p className="mt-4 text-lg text-muted-foreground">Initialisation de l'application...</p>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Clipboard, Share2, Check, Copy, QrCode, Link2, Send, Download, Upload } from "lucide-react";
+import { Clipboard, Share2, Check, Copy, QrCode, Link2, Send, Download, Upload, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getDecksSync as getDecks, createShareCodeSync as createShareCode, Deck } from "@/lib/localStorage";
+import { getDecks, createShareCode, Deck } from "@/lib/localStorage";
 import { exportSessionData, getSessionKey } from "@/lib/sessionManager";
 
 const SharePage = () => {
@@ -21,8 +21,30 @@ const SharePage = () => {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [exportData, setExportData] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [decks, setDecks] = useState<Deck[]>([]);
   
-  const decks = getDecks();
+  useEffect(() => {
+    async function loadDecks() {
+      try {
+        const loadedDecks = await getDecks();
+        setDecks(loadedDecks);
+      } catch (error) {
+        console.error("Error loading decks:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos decks",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadDecks();
+  }, [toast]);
 
   const generateShareCode = async () => {
     if (!selectedDeck) {
@@ -34,9 +56,11 @@ const SharePage = () => {
       return;
     }
     
+    setIsGeneratingCode(true);
     try {
-      const days = parseInt(expiryDays, 10);
-      const code = await createShareCode(selectedDeck, days);
+      // Dans cette implémentation, le nombre de jours d'expiration n'est pas utilisé
+      // car createShareCode définit toujours 7 jours par défaut
+      const code = await createShareCode(selectedDeck);
       const url = `${window.location.origin}/import/${code}`;
       
       setShareCode(code);
@@ -53,6 +77,8 @@ const SharePage = () => {
         description: "Impossible de générer le code de partage",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingCode(false);
     }
   };
   
@@ -67,6 +93,7 @@ const SharePage = () => {
       return;
     }
     
+    setIsExporting(true);
     try {
       const data = exportSessionData();
       if (!data) {
@@ -88,6 +115,8 @@ const SharePage = () => {
         description: "Impossible d'exporter vos données",
         variant: "destructive",
       });
+    } finally {
+      setIsExporting(false);
     }
   };
   
@@ -170,7 +199,12 @@ const SharePage = () => {
                     <SelectValue placeholder="Choisir un deck" />
                   </SelectTrigger>
                   <SelectContent>
-                    {decks.length > 0 ? (
+                    {isLoading ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Chargement des decks...</span>
+                      </div>
+                    ) : decks.length > 0 ? (
                       decks.map((deck: Deck) => (
                         <SelectItem key={deck.id} value={deck.id}>
                           {deck.title}
@@ -204,9 +238,19 @@ const SharePage = () => {
               <Button 
                 onClick={generateShareCode} 
                 className="w-full bg-indigo-600 hover:bg-indigo-700 mt-2"
+                disabled={isGeneratingCode || isLoading || !selectedDeck}
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                Générer un code de partage
+                {isGeneratingCode ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Générer un code de partage
+                  </>
+                )}
               </Button>
             </CardContent>
             
@@ -321,9 +365,19 @@ const SharePage = () => {
               <Button 
                 onClick={generateExportData} 
                 className="w-full bg-indigo-600 hover:bg-indigo-700"
+                disabled={isExporting}
               >
-                <Download className="mr-2 h-4 w-4" />
-                Générer l'export
+                {isExporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exportation en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Générer l'export
+                  </>
+                )}
               </Button>
             </CardContent>
             

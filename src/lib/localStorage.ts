@@ -610,13 +610,5 @@ async function createDefaultFlashcards(deckId: string, themeId: string): Promise
 }
 
 // Version synchrone pour backward compatibility
-export const generateSampleDataSync = (): void => {
-  generateSampleData().catch(error => {
-    console.error("Erreur lors de la génération des données:", error);
-  });
-};
-
-// Gestion de session
-export const hasSessionSync = (): boolean => {
-  return true;
-};
+// Gestion de session - Toutes les fonctions sont désormais migrées vers le fichier sessionManager.ts
+// avec une interface 100% asynchrone basée sur IndexedDB

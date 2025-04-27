@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Layers, ArrowRight, Edit, Trash2, Save } from "lucide-react";
+import { Layers, ArrowRight, Edit, Trash2, Save, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { updateThemeSync as updateTheme, deleteThemeSync as deleteTheme, Theme } from "@/lib/localStorage";
+import { updateTheme, deleteTheme, Theme } from "@/lib/localStorage";
 
 export interface ThemeCardProps {
   id: string;
@@ -35,12 +35,13 @@ const ThemeCard = ({
   const { toast } = useToast();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [editingTheme, setEditingTheme] = useState({
     title,
     description,
   });
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!editingTheme.title.trim()) {
       toast({
         title: "Titre requis",
@@ -50,8 +51,9 @@ const ThemeCard = ({
       return;
     }
 
+    setIsLoading(true);
     try {
-      const updated = updateTheme(id, {
+      const updated = await updateTheme(id, {
         title: editingTheme.title.trim(),
         description: editingTheme.description.trim(),
       });
@@ -71,12 +73,15 @@ const ThemeCard = ({
         description: "Impossible de mettre à jour le thème",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    setIsLoading(true);
     try {
-      const success = deleteTheme(id);
+      const success = await deleteTheme(id);
       if (success) {
         setShowDeleteDialog(false);
         onDelete?.();
@@ -92,6 +97,8 @@ const ThemeCard = ({
         description: "Impossible de supprimer le thème",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -210,12 +217,21 @@ const ThemeCard = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isLoading}>
               Annuler
             </Button>
-            <Button onClick={handleUpdate}>
-              <Save className="mr-2 h-4 w-4" />
-              Enregistrer
+            <Button onClick={handleUpdate} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Mise à jour...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Enregistrer
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -230,11 +246,18 @@ const ThemeCard = ({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isLoading}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer
+            <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                "Supprimer"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

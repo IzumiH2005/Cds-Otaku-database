@@ -7,7 +7,8 @@ import {
   Tag as TagIcon, 
   Save, 
   Lock, 
-  Globe 
+  Globe,
+  Loader2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { createDeckSync as createDeck, getBase64Sync as getBase64, getUserSync as getUser } from "@/lib/localStorage";
+import { createDeck, getBase64, getUser } from "@/lib/localStorage";
 
 const CreatePage = () => {
   const { toast } = useToast();
@@ -29,6 +30,7 @@ const CreatePage = () => {
   const [coverImage, setCoverImage] = useState<string | undefined>();
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +106,7 @@ const CreatePage = () => {
       return;
     }
 
+    setIsCreating(true);
     try {
       const user = await getUser();
       const userId = user?.id || "anonymous";
@@ -131,6 +134,8 @@ const CreatePage = () => {
         description: "Impossible de créer le deck",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -276,12 +281,21 @@ const CreatePage = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => navigate("/")}>
+            <Button variant="outline" onClick={() => navigate("/")} disabled={isCreating}>
               Annuler
             </Button>
-            <Button onClick={handleCreateDeck}>
-              <Save className="mr-2 h-4 w-4" />
-              Créer le deck
+            <Button onClick={handleCreateDeck} disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création en cours...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Créer le deck
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

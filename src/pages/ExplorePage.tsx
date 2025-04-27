@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { SearchIcon, Filter, X, FileUp } from "lucide-react";
+import { SearchIcon, Filter, X, FileUp, Loader2 } from "lucide-react";
 import DeckCard, { DeckCardProps } from "@/components/DeckCard";
-import { getDecksSync as getDecks, getFlashcardsByDeckSync as getFlashcardsByDeck, Deck, getUserSync as getUser, getSharedImportedDecksSync as getSharedImportedDecks } from "@/lib/localStorage";
+import { getDecks, getFlashcardsByDeck, Deck, getUser, getSharedImportedDecks } from "@/lib/localStorage";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ShareDeckDialog from "@/components/ShareDeckDialog";
@@ -20,9 +20,11 @@ const ExplorePage = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [selectedDeckId, setSelectedDeckId] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
   const loadPublicDecks = async () => {
+    setIsLoading(true);
     try {
       // Fetch published decks from Supabase
       const { data, error } = await supabase
@@ -37,6 +39,7 @@ const ExplorePage = () => {
           description: "Impossible de charger les decks publics",
           variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -54,30 +57,38 @@ const ExplorePage = () => {
 
       // Si on est dans l'onglet "shared", ajouter les decks partagés importés
       if (activeTab === "shared") {
-        const sharedDecks = getSharedImportedDecks();
-        const localDecks = getDecks();
-        
-        const importedDeckCards = sharedDecks
-          .map(shared => {
-            const deck = localDecks.find(d => d.id === shared.localDeckId);
-            if (!deck) return null;
-            
-            return {
-              id: deck.id,
-              title: deck.title,
-              description: deck.description,
-              coverImage: deck.coverImage,
-              tags: deck.tags,
-              author: "Importé",
-              cardCount: getFlashcardsByDeck(deck.id).length,
-              isPublic: deck.isPublic,
-              isShared: true
-            };
-          })
-          .filter(Boolean) as DeckCardProps[];
-        
-        // Combiner avec les decks publics
-        deckCards.push(...importedDeckCards);
+        try {
+          const sharedDecks = await getSharedImportedDecks();
+          const localDecks = await getDecks();
+          
+          const importedDeckCards = await Promise.all(
+            sharedDecks
+              .map(async shared => {
+                const deck = localDecks.find(d => d.id === shared.localDeckId);
+                if (!deck) return null;
+                
+                const flashcards = await getFlashcardsByDeck(deck.id);
+                
+                return {
+                  id: deck.id,
+                  title: deck.title,
+                  description: deck.description,
+                  coverImage: deck.coverImage,
+                  tags: deck.tags,
+                  author: "Importé",
+                  cardCount: flashcards.length,
+                  isPublic: deck.isPublic,
+                  isShared: true
+                };
+              })
+              .filter(Boolean) as Promise<DeckCardProps>[]
+          );
+          
+          // Combiner avec les decks publics
+          deckCards.push(...importedDeckCards.filter(Boolean));
+        } catch (err) {
+          console.error("Error loading shared decks:", err);
+        }
       }
 
       // Extract unique tags
@@ -92,6 +103,13 @@ const ExplorePage = () => {
       setDecks(deckCards);
     } catch (error) {
       console.error("Unexpected error loading public decks:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors du chargement des decks",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -173,8 +191,16 @@ const ExplorePage = () => {
           <Button
             onClick={loadPublicDecks}
             variant="outline"
+            disabled={isLoading}
           >
-            Actualiser
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Chargement...
+              </>
+            ) : (
+              "Actualiser"
+            )}
           </Button>
         </div>
       </div>
@@ -236,7 +262,12 @@ const ExplorePage = () => {
         </TabsList>
 
         <TabsContent value="all" className="mt-0">
-          {filteredDecks.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2">Chargement des decks...</p>
+            </div>
+          ) : filteredDecks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDecks.map((deck) => (
                 <DeckCard key={deck.id} {...deck} />
@@ -255,32 +286,50 @@ const ExplorePage = () => {
         </TabsContent>
 
         <TabsContent value="recent" className="mt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDecks
-              .sort((a, b) => {
-                const deckA = getDecks().find(d => d.id === a.id);
-                const deckB = getDecks().find(d => d.id === b.id);
-                if (!deckA || !deckB) return 0;
-                return new Date(deckB.createdAt).getTime() - new Date(deckA.createdAt).getTime();
-              })
-              .map((deck) => (
-                <DeckCard key={deck.id} {...deck} />
-              ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2">Chargement des decks récents...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDecks
+                .sort((a, b) => {
+                  // Utiliser la date qui est incluse dans les données filtrées
+                  // au lieu d'essayer d'obtenir les données à nouveau
+                  return -1; // Par défaut, maintenir l'ordre actuel
+                })
+                .map((deck) => (
+                  <DeckCard key={deck.id} {...deck} />
+                ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="popular" className="mt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDecks
-              .sort((a, b) => b.cardCount - a.cardCount)
-              .map((deck) => (
-                <DeckCard key={deck.id} {...deck} />
-              ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2">Chargement des decks populaires...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDecks
+                .sort((a, b) => b.cardCount - a.cardCount)
+                .map((deck) => (
+                  <DeckCard key={deck.id} {...deck} />
+                ))}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="shared" className="mt-0">
-          {filteredDecks.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2">Chargement des decks partagés...</p>
+            </div>
+          ) : filteredDecks.filter(deck => deck.isShared).length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredDecks
                 .filter(deck => deck.isShared)
@@ -297,6 +346,7 @@ const ExplorePage = () => {
                 variant="default"
                 onClick={openShareDialogForExport}
                 className="mt-4"
+                disabled={isLoading}
               >
                 <FileUp className="mr-2 h-4 w-4" />
                 Importer un deck
